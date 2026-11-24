@@ -8,7 +8,7 @@ Marqueurs :
 
 | N° | Tâche | Statut |
 |---|---|---|
-| 01 | [Prototype de bout en bout](01-prototype.md) | En cours |
+| 01 | [Prototype de bout en bout](01-prototype.md) | Code terminé, test terrain à faire |
 | 02 | [Mesures radio et format de message](02-mesures-format.md) | À faire |
 | 03 | [Identité et stockage sécurisé](03-identite-stockage.md) | À faire |
 | 04 | [Contacts par QR code](04-contacts-qr.md) | À faire |

@@ -95,24 +95,26 @@ Principes :
 ### Ce qu'ajoute Wavepod
 - **Décision** : chaque message est chiffré et authentifié sur le téléphone avant d'être remis au module.
 - Identité : paire X25519 (échange) et Ed25519 (signature, utile pour les QR et les groupes), générée sur le téléphone et stockée dans le Keychain ou le Keystore. Promesse produit : « tes clés ne quittent jamais ton téléphone ».
-- Conversation à deux : clé partagée = HKDF(X25519(moi, contact), contexte). Chiffrement AEAD ChaCha20-Poly1305 (proposition, voir `PLAN.md`).
+- Conversation à deux : clé partagée = HKDF-SHA256(X25519(moi, contact), « wavepod/v1/dm » et les deux clés publiques triées). Chiffrement AEAD ChaCha20-Poly1305. Bibliothèques : `@noble/curves`, `@noble/ciphers` et `@noble/hashes` (voir `PLAN.md`).
 - Groupes (v1) : clé symétrique de groupe distribuée par messages privés chiffrés. Limite : un membre peut se faire passer pour un autre membre. Une signature par message (64 octets) est trop coûteuse et serait réservée aux messages sensibles.
 - Confidentialité persistante : à étudier plus tard (rotation périodique de clés négociée hors bande ou par échange léger). Le faible débit rend un ratchet complet coûteux en accusés.
 
 ### Format de message compact (proposition)
 
-Taille utile : la trame LoRa fait au maximum 255 octets. L'en-tête Meshtastic prend 16 octets et le champ `payload` du message `Data` est limité à 233 octets (À valider). Il faut retirer l'encapsulation protobuf (port, longueur) et, si on utilise aussi le PKI Meshtastic, environ 12 octets supplémentaires.
+Taille utile : la trame LoRa fait au maximum 255 octets. Le champ `payload` du message `Data` est limité à 233 octets (confirmé dans `mesh.options`, protobufs v2.8.3). Si Meshtastic chiffre aussi le message direct avec son PKI, il ajoute environ 12 octets (À valider en tâche 02).
+
+Format implémenté dans le prototype (`app/src/protocol/codec.ts`) :
 
 | Champ | Taille | Rôle |
 |---|---|---|
 | Version et type | 1 octet | 4 bits de version, 4 bits de type (texte, ack, balise, réaction…) |
 | Indice de clé expéditeur | 2 octets | Premiers octets du hash de la clé publique, pour choisir la clé sans essais multiples |
 | Identifiant de message | 4 octets | Aléatoire, sert à la déduplication et aux accusés |
-| Nonce | 12 octets | Aléatoire (ou dérivé d'un compteur persistant pour économiser des octets, À étudier) |
-| Contenu chiffré | variable | Texte UTF-8 compressé, ou champs binaires |
+| Extension de nonce | 8 octets | Aléatoire. Avec l'identifiant, forme le nonce de 12 octets (96 bits aléatoires) |
+| Contenu chiffré | variable | Texte UTF-8, ou champs binaires |
 | Tag | 16 octets | Authentification Poly1305 |
 
-Surcoût : 35 octets, dont 28 de nonce et de tag. L'en-tête (version, indice, identifiant) passe en données associées. Il reste environ 180 à 190 octets de texte par paquet (À valider). Au-delà, le message est découpé en fragments numérotés, ou refusé dans le MVP avec un compteur de caractères.
+Surcoût : 31 octets. L'identifiant de message sert aussi de début de nonce, ce qui économise 4 octets. Tout l'en-tête passe en données associées. Le prototype plafonne l'enveloppe à 200 octets par prudence, soit 169 octets de texte UTF-8 (à relever après les mesures de la tâche 02). Au-delà, le message sera découpé en fragments numérotés, ou refusé dans le MVP avec un compteur de caractères.
 
 ### Modèle de menace
 
@@ -159,7 +161,7 @@ Hypothèse de calcul : réglage LongFast (SF11, 250 kHz, CR 4/5). Un paquet de 6
 
 ## Quota d'émission
 
-**Point de contradiction signalé** : dans le brief, le réglage par défaut est à 1 %. Or la région `EU_868` de Meshtastic utilise par défaut la sous-bande 869,4 à 869,65 MHz, où la règle est de 10 % de duty cycle et 500 mW PAR (À valider dans le code `RadioInterface`).
+**Point de contradiction signalé** : dans le brief, le réglage par défaut est à 1 %. Or la région `EU_868` de Meshtastic utilise la sous-bande 869,4 à 869,65 MHz, avec 10 % de duty cycle, 27 dBm et le preset LongFast par défaut. C'est confirmé dans le code du firmware (`src/mesh/RadioInterface.cpp`, v2.8.2).
 
 | Réglage | Duty cycle | Messages courts par heure et par module (ordre de grandeur) |
 |---|---|---|
@@ -302,7 +304,7 @@ Avant d'écrire, Wavepod lit la configuration existante et prévient l'utilisate
 |---|---|---|---|
 | 863 à 868,0 MHz | 25 mW PAR | 0,1 % (ou LBT et AFA) | Non |
 | 868,0 à 868,6 MHz | 25 mW PAR | 1 % | Possible |
-| 869,4 à 869,65 MHz | 500 mW PAR | 10 % | Défaut `EU_868` (À valider) |
+| 869,4 à 869,65 MHz | 500 mW PAR | 10 % | Défaut `EU_868` (confirmé, firmware v2.8.2) |
 
 - Cadre : recommandation ERC 70-03, norme ETSI EN 300 220, transposition nationale (ARCEP en France). À vérifier pays par pays.
 - Le duty cycle s'applique à l'émetteur sur une fenêtre glissante d'une heure. La réception est continue et illimitée.
