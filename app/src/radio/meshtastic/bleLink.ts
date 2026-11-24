@@ -37,11 +37,15 @@ export interface FoundDevice {
 
 export async function requestBlePermissions(): Promise<boolean> {
   if (Platform.OS !== 'android') return true;
-  const result = await PermissionsAndroid.requestMultiple([
-    PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-    PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-  ]);
+  // Android 12+ (API 31) uses BLUETOOTH_SCAN/CONNECT; older versions need location for BLE scans.
+  const permissions =
+    Number(Platform.Version) >= 31
+      ? [
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+        ]
+      : [PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION];
+  const result = await PermissionsAndroid.requestMultiple(permissions);
   return Object.values(result).every(
     r => r === PermissionsAndroid.RESULTS.GRANTED,
   );

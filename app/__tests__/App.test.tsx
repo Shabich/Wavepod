@@ -11,3 +11,8 @@ test('renders correctly', async () => {
     ReactTestRenderer.create(<App />);
   });
 });
+
+test('self-test passes', () => {
+  const { runSelfTest } = require('../src/prototype/selfTest');
+  expect(runSelfTest()).toMatchObject({ ok: true });
+});
