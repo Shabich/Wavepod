@@ -33,7 +33,6 @@ Objectif : un message texte chiffré par Wavepod, transporté par Meshtastic ent
 ## Notes
 
 - Constat de la simulation : si le module redémarre, l'adaptateur passe en « déconnecté » sans se reconnecter, et le message en cours reste « envoyé ». À traiter en tâches 05 (outbox) et 07 (reconnexion).
-
 - Les clés de test A et B sont en dur et identiques sur tous les téléphones : sécurité nulle, pour le prototype seulement (remplacé en tâche 03).
 - Port 256 (`PRIVATE_APP`) : réservé au développement, il faudra demander un numéro dédié à Meshtastic.
 - Android SDK absent sur la machine de développement : le build Android n'a pas été testé.

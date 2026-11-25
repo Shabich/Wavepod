@@ -10,7 +10,7 @@ Marqueurs :
 |---|---|---|
 | 01 | [Prototype de bout en bout](01-prototype.md) | Code terminé, test terrain à faire |
 | 02 | [Mesures radio et format de message](02-mesures-format.md) | À faire |
-| 03 | [Identité et stockage sécurisé](03-identite-stockage.md) | À faire |
+| 03 | [Identité et stockage sécurisé](03-identite-stockage.md) | Terminé (branche `task-03-identity`) |
 | 04 | [Contacts par QR code](04-contacts-qr.md) | À faire |
 | 05 | [Outbox et livraison fiable](05-outbox.md) | À faire |
 | 06 | [Présence](06-presence.md) | À faire |
