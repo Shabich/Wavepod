@@ -22,6 +22,17 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.wavepod.contact</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>wavepod</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
@@ -35,6 +46,8 @@
 	</dict>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Wavepod se connecte en Bluetooth à ton module radio pour envoyer et recevoir tes messages.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Wavepod utilise la caméra pour scanner le QR code de tes contacts.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
 	<key>RCTNewArchEnabled</key>
