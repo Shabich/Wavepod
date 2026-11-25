@@ -92,6 +92,11 @@ Principes :
 - Les en-têtes sont en clair : expéditeur, destinataire, identifiant de paquet, sauts, relais.
 - Une CVE (CVE-2025-53627) a documenté un repli silencieux vers le chiffrement de canal. C'est un argument de plus pour ne pas dépendre uniquement de la couche Meshtastic.
 
+### Constats dans le code du firmware (v2.7.26)
+- Un message direct n'est émis en PKI que si le module émetteur connaît la clé publique Meshtastic du destinataire. Sinon, le firmware refuse d'envoyer (`PKI_SEND_FAIL_PUBLIC_KEY`, « refusing to send legacy DM »). **Conséquence pour Wavepod** : avant le premier message, les deux modules doivent avoir échangé leurs NodeInfo, ou la clé Meshtastic du contact doit être injectée dans le module (piste : la mettre dans le QR Wavepod et l'ajouter par `AdminMessage`, À valider en tâche 04).
+- Le destinataire rejette les messages directs non PKI (« Rejecting legacy DM »), mais seulement sur le port texte (`TEXT_MESSAGE_APP`). Les paquets Wavepod (port 256) ne sont pas concernés.
+- Le PKI ajoute un surcoût (`MESHTASTIC_PKC_OVERHEAD`), et le paquet est refusé (`TOO_LARGE`) si l'en-tête, la donnée et ce surcoût dépassent 255 octets.
+
 ### Ce qu'ajoute Wavepod
 - **Décision** : chaque message est chiffré et authentifié sur le téléphone avant d'être remis au module.
 - Identité : paire X25519 (échange) et Ed25519 (signature, utile pour les QR et les groupes), générée sur le téléphone et stockée dans le Keychain ou le Keystore. Promesse produit : « tes clés ne quittent jamais ton téléphone ».
