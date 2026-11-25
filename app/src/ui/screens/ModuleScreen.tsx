@@ -1,6 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { AppServices } from '../../app/services';
+import type { ModuleStatus } from '../../app/moduleManager';
+import { MIN_FIRMWARE } from '../../radio/meshtastic/provisioning';
 import {
   requestBlePermissions,
   scanForModules,
@@ -8,7 +19,9 @@ import {
 } from '../../radio/meshtastic/bleLink';
 import { Header, PrimaryButton } from '../components';
 import { useModuleState } from '../hooks';
-import { ui } from '../theme';
+import { OK, ui } from '../theme';
+
+type Busy = null | 'connecting' | 'provisioning' | 'restoring';
 
 export function ModuleScreen({
   s,
@@ -21,9 +34,51 @@ export function ModuleScreen({
   const [devices, setDevices] = useState<FoundDevice[]>([]);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<ModuleStatus | null>(null);
+  const [busy, setBusy] = useState<Busy>(null);
   const stopRef = useRef<(() => void) | null>(null);
+  const autoDone = useRef<number | null>(null);
 
   useEffect(() => () => stopRef.current?.(), []);
+
+  const refresh = useCallback(async () => {
+    setStatus(await s.modules.status());
+  }, [s]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh, state]);
+
+  const provision = useCallback(async () => {
+    setBusy('provisioning');
+    setError(null);
+    try {
+      await s.modules.provision();
+    } catch (e) {
+      setError(`Configuration interrompue : ${String(e)}`);
+    } finally {
+      setBusy(null);
+      refresh();
+    }
+  }, [s, refresh]);
+
+  // A fresh module (nothing to warn about) is configured without asking.
+  useEffect(() => {
+    const node = s.hub.localNode;
+    if (
+      !status ||
+      busy ||
+      node === undefined ||
+      autoDone.current === node ||
+      status.firmware !== 'ok' ||
+      status.plan.changes.length === 0 ||
+      status.plan.warnings.length > 0
+    ) {
+      return;
+    }
+    autoDone.current = node;
+    provision();
+  }, [status, busy, s, provision]);
 
   const scan = async () => {
     setError(null);
@@ -49,57 +104,172 @@ export function ModuleScreen({
     stopRef.current?.();
     setScanning(false);
     setError(null);
+    setBusy('connecting');
     try {
       await s.connectModule(d.id, d.name);
-      back();
     } catch (e) {
       setError(`Connexion impossible : ${String(e)}`);
+    } finally {
+      setBusy(null);
     }
   };
 
+  const confirmRestore = () =>
+    Alert.alert(
+      'Restaurer la configuration d’origine ?',
+      'Le module reprendra les réglages qu’il avait avant Wavepod, puis redémarrera.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Restaurer',
+          style: 'destructive',
+          onPress: async () => {
+            setBusy('restoring');
+            try {
+              await s.modules.restore();
+              autoDone.current = s.hub.localNode ?? null; // do not re-apply right away
+            } catch (e) {
+              setError(`Restauration interrompue : ${String(e)}`);
+            } finally {
+              setBusy(null);
+              refresh();
+            }
+          },
+        },
+      ],
+    );
+
   const adapter = s.hub.adapter;
+  const connected = state !== 'disconnected' && adapter;
 
   return (
-    <View style={ui.screen}>
+    <ScrollView contentContainerStyle={ui.screen}>
       <Header title="Module radio" onBack={back} />
-      {state !== 'disconnected' && adapter ? (
+
+      {busy && (
+        <View style={[ui.card, ui.row]}>
+          <ActivityIndicator />
+          <Text style={ui.body}>
+            {busy === 'connecting'
+              ? 'Connexion au module…'
+              : busy === 'provisioning'
+              ? 'Configuration du module… il va redémarrer, garde-le près du téléphone.'
+              : 'Restauration… le module va redémarrer.'}
+          </Text>
+        </View>
+      )}
+
+      {connected && (
         <View style={ui.card}>
           <Text style={ui.heading}>{s.moduleName()}</Text>
           <Text style={ui.muted}>
             {state === 'ready' ? 'Connecté' : 'Connexion…'} · firmware{' '}
             {adapter.firmwareVersion ?? '?'}
           </Text>
+        </View>
+      )}
+
+      {status && !busy && (
+        <ModuleSetup status={status} onProvision={provision} />
+      )}
+
+      {error && <Text style={ui.error}>{error}</Text>}
+
+      {connected && !busy ? (
+        <>
+          {status?.hasBackup && (
+            <PrimaryButton
+              title="Restaurer la configuration d’origine"
+              kind="secondary"
+              onPress={confirmRestore}
+            />
+          )}
           <PrimaryButton
             title="Déconnecter"
             kind="secondary"
             onPress={() => s.disconnectModule()}
           />
-        </View>
+        </>
       ) : (
+        !busy && (
+          <>
+            <Text style={ui.muted}>
+              Allume ton module et garde-le près du téléphone.
+            </Text>
+            <PrimaryButton
+              title={scanning ? 'Recherche…' : 'Chercher un module'}
+              onPress={scan}
+              disabled={scanning}
+            />
+            <FlatList
+              scrollEnabled={false}
+              data={devices}
+              keyExtractor={d => d.id}
+              renderItem={({ item }) => (
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.item}
+                  onPress={() => connect(item)}
+                >
+                  <Text style={ui.body}>{item.name}</Text>
+                  <Text style={ui.muted}>Signal {item.rssi ?? '?'} dBm</Text>
+                </Pressable>
+              )}
+            />
+          </>
+        )
+      )}
+    </ScrollView>
+  );
+}
+
+function ModuleSetup({
+  status,
+  onProvision,
+}: {
+  status: ModuleStatus;
+  onProvision: () => void;
+}) {
+  if (status.firmware === 'too-old') {
+    return (
+      <View style={ui.card}>
+        <Text style={ui.error}>
+          Firmware trop ancien ({status.firmwareVersion}). Mets le module à jour
+          (version {MIN_FIRMWARE} ou plus récente) avec le flasheur web
+          Meshtastic.
+        </Text>
+      </View>
+    );
+  }
+  if (status.plan.changes.length === 0) {
+    return (
+      <View style={ui.card}>
+        <Text style={[ui.heading, styles.ok]}>Module prêt pour Wavepod</Text>
         <Text style={ui.muted}>
-          Allume ton module et garde-le près du téléphone.
+          Région Europe, position coupée, nom neutre.
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <View style={ui.card}>
+      <Text style={ui.heading}>Configuration pour Wavepod</Text>
+      {status.firmware === 'unknown' && (
+        <Text style={ui.muted}>Version du firmware inconnue.</Text>
+      )}
+      {status.plan.warnings.length > 0 && (
+        <Text style={ui.error}>
+          Ce module semble configuré pour un autre usage (
+          {status.plan.warnings.join(' ; ')}). Sa configuration actuelle sera
+          sauvegardée et pourra être restaurée.
         </Text>
       )}
-      {error && <Text style={ui.error}>{error}</Text>}
-      <PrimaryButton
-        title={scanning ? 'Recherche…' : 'Chercher un module'}
-        onPress={scan}
-        disabled={scanning}
-      />
-      <FlatList
-        data={devices}
-        keyExtractor={d => d.id}
-        renderItem={({ item }) => (
-          <Pressable
-            accessibilityRole="button"
-            style={styles.item}
-            onPress={() => connect(item)}
-          >
-            <Text style={ui.body}>{item.name}</Text>
-            <Text style={ui.muted}>Signal {item.rssi ?? '?'} dBm</Text>
-          </Pressable>
-        )}
-      />
+      {status.plan.changes.map(c => (
+        <Text key={c} style={ui.body}>
+          • {c}
+        </Text>
+      ))}
+      <PrimaryButton title="Configurer le module" onPress={onProvision} />
     </View>
   );
 }
@@ -110,4 +280,5 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: '#d0d5dd',
   },
+  ok: { color: OK },
 });

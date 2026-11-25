@@ -7,6 +7,7 @@ import { lastSeenLabel } from '../format';
 import { useEngineTick, useModuleState } from '../hooks';
 import { MUTED, OCEAN, OK, ui } from '../theme';
 import type { Navigate } from '../navigation';
+import { MetaRepository } from '../../storage/meta';
 
 const MODULE_LABEL = {
   disconnected: 'Aucun module connecté',
@@ -20,6 +21,11 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
   const moduleState = useModuleState(s);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [pending, setPending] = useState<Record<string, number>>({});
+  const [steps, setSteps] = useState<{
+    name: boolean;
+    module: boolean;
+    contact: boolean;
+  } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -35,12 +41,55 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
         ).length;
       }
       setPending(counts);
+
+      // "Pour commencer" until the three steps were done once.
+      const meta = new MetaRepository(s.db);
+      if ((await meta.get('onboarding_done')) === '1') {
+        setSteps(null);
+        return;
+      }
+      const status = await s.modules.status();
+      const done = {
+        name: (await s.contacts.displayName()) !== '',
+        module:
+          status !== null &&
+          status.firmware !== 'too-old' &&
+          status.plan.changes.length === 0,
+        contact: list.length > 0,
+      };
+      if (done.name && done.module && done.contact) {
+        await meta.set('onboarding_done', '1');
+        setSteps(null);
+      } else {
+        setSteps(done);
+      }
     })();
-  }, [s, tick]);
+  }, [s, tick, moduleState]);
 
   return (
     <View style={ui.screen}>
       <Text style={ui.title}>Wavepod</Text>
+
+      {steps && (
+        <View style={ui.card}>
+          <Text style={ui.heading}>Pour commencer</Text>
+          <Step
+            done={steps.name}
+            label="Choisis ton pseudo"
+            onPress={() => go({ name: 'myQr' })}
+          />
+          <Step
+            done={steps.module}
+            label="Connecte et configure ton module"
+            onPress={() => go({ name: 'module' })}
+          />
+          <Step
+            done={steps.contact}
+            label="Ajoute ton premier contact"
+            onPress={() => go({ name: 'addContact' })}
+          />
+        </View>
+      )}
 
       <Pressable
         accessibilityRole="button"
@@ -106,7 +155,26 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
   );
 }
 
+function Step({
+  done,
+  label,
+  onPress,
+}: {
+  done: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} disabled={done}>
+      <Text style={[ui.body, done && styles.stepDone]}>
+        {done ? '✓' : '○'} {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  stepDone: { color: MUTED, textDecorationLine: 'line-through' },
   flex: { flex: 1 },
   module: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#d0d5dd' },
