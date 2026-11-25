@@ -7,9 +7,9 @@ import { ContactService } from '../contacts/service';
 import { DeliveryEngine, type EngineEvent } from '../delivery/engine';
 import type { WavepodIdentity } from '../crypto/identity';
 import { RadioHub } from '../radio/RadioHub';
-import { MeshtasticAdapter } from '../radio/meshtastic/MeshtasticAdapter';
 import { connectToModule } from '../radio/meshtastic/bleLink';
 import { MetaRepository } from '../storage/meta';
+import { ModuleManager } from './moduleManager';
 import type { SqlDatabase } from '../storage/types';
 
 export interface AppServices {
@@ -18,6 +18,7 @@ export interface AppServices {
   hub: RadioHub;
   engine: DeliveryEngine;
   contacts: ContactService;
+  modules: ModuleManager;
   connectModule(deviceId: string, name: string): Promise<void>;
   disconnectModule(): Promise<void>;
   moduleName(): string | null;
@@ -49,7 +50,12 @@ export function createServices(
     () => (hub.adapter?.connectionState === 'ready' ? hub.adapter : null),
     addLog,
   );
-  let currentName: string | null = null;
+  const modules = new ModuleManager({
+    connectLink: connectToModule,
+    hub,
+    meta: new MetaRepository(db),
+    log: addLog,
+  });
 
   hub.onConnectionState(state => {
     addLog(`module ${state}`);
@@ -67,26 +73,14 @@ export function createServices(
     hub,
     engine,
     contacts,
+    modules,
     log,
     onLog(l) {
       logListeners.add(l);
       return () => logListeners.delete(l);
     },
-    moduleName: () => currentName,
-    async connectModule(deviceId, name) {
-      await hub.adapter?.stop().catch(() => undefined);
-      hub.detach();
-      const link = await connectToModule(deviceId);
-      const adapter = new MeshtasticAdapter(link);
-      currentName = name;
-      hub.attach(adapter);
-      await adapter.start();
-    },
-    async disconnectModule() {
-      const adapter = hub.adapter;
-      hub.detach();
-      currentName = null;
-      await adapter?.stop().catch(() => undefined);
-    },
+    moduleName: () => modules.moduleName,
+    connectModule: (deviceId, name) => modules.connect(deviceId, name),
+    disconnectModule: () => modules.disconnect(),
   };
 }
