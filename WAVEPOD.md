@@ -206,6 +206,7 @@ Consomment aussi du temps d'antenne : accusés, retries, relais, balises Wavepod
 3. Tout signal du contact vide sa file, dans l'ordre et avec un espacement.
 4. Une sonde de secours (un seul message en attente, le plus ancien) part toutes les 1 à 2 h, pour éviter l'interblocage quand les deux côtés ont coupé leur balise.
 5. Présence à sens unique (je l'entends, il ne m'entend pas) : après échec des retries, le message revient en attente, pas en échec définitif.
+   - Précision d'implémentation : un signal relance seulement les messages en attente. Une série d'essais en cours garde son calendrier, et une sonde réussie vide le reste de la file (voir `tasks/05-outbox.md`).
 6. Le message passe en échec à l'expiration du TTL, ou si l'utilisateur l'annule.
 
 ```mermaid

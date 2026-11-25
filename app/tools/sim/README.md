@@ -12,10 +12,11 @@ Fait tourner la pile Wavepod (codec, chiffrement, adaptateur Meshtastic, session
 ```sh
 npm run sim:start        # deux nœuds : A sur localhost:4403, B sur localhost:4404
 npm run sim:test -- 20   # A envoie 20 messages à B, attend les accusés applicatifs
+npm run sim:test -- 20 --outage   # puis coupe B, envoie 3 messages, relance B : la file doit se vider sans doublon
 npm run sim:stop
 ```
 
-Code de sortie 0 si tous les messages sont livrés et déchiffrés.
+Code de sortie 0 si tous les messages sont livrés et déchiffrés. `VERBOSE=1` affiche le journal du moteur. Le test utilise le moteur de livraison complet, avec une base SQLite en mémoire et des délais raccourcis.
 
 ## Fonctionnement
 
