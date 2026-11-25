@@ -130,7 +130,10 @@ export function toBase64Url(bytes: Uint8Array): string {
 
 export function fromBase64Url(text: string): Uint8Array {
   // Accept standard base64 too (links pasted from other tools).
-  const clean = text.replace(/[=]+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const clean = text
+    .replace(/[=]+$/, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
   if (clean.length % 4 === 1) throw new Error('invalid base64url length');
   const out = new Uint8Array(Math.floor((clean.length * 3) / 4));
   let buffer = 0;
