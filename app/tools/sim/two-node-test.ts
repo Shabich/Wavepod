@@ -13,7 +13,14 @@ import { execSync } from 'node:child_process';
 import { MeshtasticAdapter } from '../../src/radio/meshtastic/MeshtasticAdapter';
 import { DeliveryEngine } from '../../src/delivery/engine';
 import type { DeliveryPolicy } from '../../src/delivery/policy';
-import { generateIdentity, type Identity } from '../../src/crypto/envelope';
+import type { Identity } from '../../src/crypto/envelope';
+import {
+  identityFromMasterSeed,
+  newMasterSeed,
+  type WavepodIdentity,
+} from '../../src/crypto/identity';
+import { ContactService } from '../../src/contacts/service';
+import { MetaRepository } from '../../src/storage/meta';
 import { migrate } from '../../src/storage/migrations';
 import { NodeSqliteDatabase } from '../../__tests__/nodeSqlite';
 import { connectTcp } from './tcpLink';
@@ -101,8 +108,10 @@ async function main() {
   const dbB = new NodeSqliteDatabase();
   await migrate(dbA);
   await migrate(dbB);
-  const idA = generateIdentity();
-  const idB = generateIdentity();
+  const wA = identityFromMasterSeed(newMasterSeed());
+  const wB = identityFromMasterSeed(newMasterSeed());
+  const idA = wA.box;
+  const idB = wB.box;
 
   const a = await side('A', A_ADDR, idA, dbA);
   let b = await side('B', B_ADDR, idB, dbB);
@@ -112,23 +121,32 @@ async function main() {
     )} · firmware ${a.adapter.firmwareVersion}`,
   );
 
-  // Contacts as a QR exchange would create them (task 04), both "seen" now.
-  a.peerId = (
-    await a.engine.contacts.upsert({
-      publicKey: idB.publicKey,
-      name: 'B',
-      nodeNum: b.adapter.localNode,
-    })
-  ).id;
-  b.peerId = (
-    await b.engine.contacts.upsert({
-      publicKey: idA.publicKey,
-      name: 'A',
-      nodeNum: a.adapter.localNode,
-    })
-  ).id;
-  await a.engine.signal(a.peerId, b.adapter.localNode!);
-  await b.engine.signal(b.peerId, a.adapter.localNode!);
+  // Mutual QR exchange, as in the app: each side reads the other's card link.
+  const service = (x: Side, id: WavepodIdentity) =>
+    new ContactService(
+      id,
+      x.engine.contacts,
+      new MetaRepository(x.db),
+      x.engine,
+      () => x.adapter,
+    );
+  const svcA = service(a, wA);
+  const svcB = service(b, wB);
+  await svcA.setDisplayName('Alice');
+  await svcB.setDisplayName('Bruno');
+  const cardA = await svcA.myCardLink();
+  const cardB = await svcB.myCardLink();
+  const seenByA = await svcA.inspect(cardB.link);
+  const seenByB = await svcB.inspect(cardA.link);
+  console.log(
+    `Cartes : ${cardA.link.length} car., module inclus ${
+      cardA.includesModule
+    }, empreinte ${seenByA.safetyNumber} (${
+      seenByA.safetyNumber === seenByB.safetyNumber ? 'identique' : 'DIFFÉRENTE'
+    } des deux côtés)`,
+  );
+  a.peerId = (await svcA.add(seenByA)).id;
+  b.peerId = (await svcB.add(seenByB)).id;
 
   // Phase 1
   const t1 = Date.now();
