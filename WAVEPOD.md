@@ -140,8 +140,8 @@ Surcoût : 31 octets. L'identifiant de message sert aussi de début de nonce, ce
 
 ## Contacts
 
-- **Décision** : ajout par QR code « scanne pour m'ajouter ». Contenu proposé : version, clé publique Wavepod (32 octets), identifiant de nœud Meshtastic actuel (4 octets), pseudo court, somme de contrôle. Le tout est encodé en base64url dans un lien `wavepod://add/...`.
-- Compatibilité Meshtastic : les versions récentes ont un lien de contact `meshtastic.org/v/#...` qui contient un protobuf `SharedContact` (À valider). Piste : afficher deux QR, ou intégrer la clé Wavepod dans un champ compatible. Le format exact est à étudier sur le code source.
+- **Décision** : ajout par QR code « scanne pour m'ajouter », lien `wavepod://add#<base64url>`. Il contient les clés publiques X25519 et Ed25519, le pseudo et le `SharedContact` Meshtastic du module, le tout signé en Ed25519. Format détaillé dans `docs/qr-format.md`.
+- Compatibilité Meshtastic : le `SharedContact` embarqué est le même que celui des liens `meshtastic.org/v/#...` (vérifié dans le code de Meshtastic-Android). Wavepod l'injecte dans le module avec `AdminMessage.add_contact`, ce qui lève le blocage PKI des messages directs (vérifié contre `meshtasticd`).
 - **Décision** : l'adresse d'un contact est un identifiant dérivé de sa clé (par exemple les 8 premiers octets d'un hash), jamais sa position. L'identifiant de nœud Meshtastic n'est qu'un indice de routage modifiable, car le contact peut changer de module.
 - Vérification : empreinte courte affichée des deux côtés (style « numéro de sécurité »).
 

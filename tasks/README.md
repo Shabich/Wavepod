@@ -11,7 +11,7 @@ Marqueurs :
 | 01 | [Prototype de bout en bout](01-prototype.md) | Code terminé, test terrain à faire |
 | 02 | [Mesures radio et format de message](02-mesures-format.md) | À faire |
 | 03 | [Identité et stockage sécurisé](03-identite-stockage.md) | Terminé (branche `task-03-identity`) |
-| 04 | [Contacts par QR code](04-contacts-qr.md) | À faire |
+| 04 | [Contacts par QR code](04-contacts-qr.md) | Code terminé sauf caméra Android, test terrain à faire (branche `task-04-contacts`) |
 | 05 | [Outbox et livraison fiable](05-outbox.md) | Code terminé, test terrain à faire (branche `task-05-outbox`) |
 | 06 | [Présence](06-presence.md) | À faire |
 | 07 | [Arrière-plan et messages manqués](07-arriere-plan.md) | À faire |
