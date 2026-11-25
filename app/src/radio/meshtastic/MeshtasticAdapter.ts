@@ -18,6 +18,7 @@ import { randomMessageId } from '../../crypto/envelope';
 import {
   decodeFromRadio,
   encodeAddContact,
+  encodeAdmin,
   encodePacket,
   encodeSharedContact,
   encodeWantConfig,
@@ -25,7 +26,17 @@ import {
   type NodeSummary,
   type RadioEvent,
 } from './framing';
-import { Routing_Error } from './proto/meshtastic/mesh_pb';
+import {
+  Routing_Error,
+  UserSchema,
+  type User,
+} from './proto/meshtastic/mesh_pb';
+import { create, fromBinary } from '@bufbuild/protobuf';
+import {
+  AdminMessageSchema,
+  type AdminMessage,
+} from './proto/meshtastic/admin_pb';
+import type { ModuleSnapshot } from './provisioning';
 
 /** Byte-level BLE link to one Meshtastic module. */
 export interface BleLink {
@@ -60,6 +71,8 @@ export class MeshtasticAdapter implements RadioInterface {
 
   readonly nodes = new Map<number, NodeSummary>();
   firmwareVersion: string | undefined;
+  /** Module configuration as received during the last sync. */
+  readonly snapshot: ModuleSnapshot = {};
 
   private packets = new Emitter<RadioPacket>();
   private acks = new Emitter<RadioAck>();
@@ -122,6 +135,13 @@ export class MeshtasticAdapter implements RadioInterface {
     return id;
   }
 
+  /** Our module's owner (User) from the NodeDB, if synced. */
+  ownUser(): User | undefined {
+    if (this.myNodeNum === undefined) return undefined;
+    const bytes = this.nodes.get(this.myNodeNum)?.userBytes;
+    return bytes ? fromBinary(UserSchema, bytes) : undefined;
+  }
+
   /** Our module as a Meshtastic SharedContact, for the QR card. Null until synced. */
   ownSharedContact(): Uint8Array | null {
     if (this.myNodeNum === undefined) return null;
@@ -137,6 +157,30 @@ export class MeshtasticAdapter implements RadioInterface {
     }
     await this.link.writeToRadio(
       encodeAddContact(this.myNodeNum, randomMessageId() || 1, sharedContact),
+    );
+  }
+
+  /**
+   * Sends admin messages inside one edit transaction, so the module applies them
+   * together and reboots once. Expect a disconnection afterwards.
+   */
+  async applyAdmin(messages: AdminMessage[]): Promise<void> {
+    if (this.state !== 'ready' || this.myNodeNum === undefined) {
+      throw new Error(`radio not ready (${this.state})`);
+    }
+    const me = this.myNodeNum;
+    const send = (admin: AdminMessage) =>
+      this.link.writeToRadio(encodeAdmin(me, randomMessageId() || 1, admin));
+    await send(
+      create(AdminMessageSchema, {
+        payloadVariant: { case: 'beginEditSettings', value: true },
+      }),
+    );
+    for (const m of messages) await send(m);
+    await send(
+      create(AdminMessageSchema, {
+        payloadVariant: { case: 'commitEditSettings', value: true },
+      }),
     );
   }
 
@@ -193,6 +237,19 @@ export class MeshtasticAdapter implements RadioInterface {
       case 'firmware':
         this.firmwareVersion = event.version;
         break;
+      case 'config': {
+        const c = event.config.payloadVariant;
+        if (c.case === 'lora') this.snapshot.lora = c.value;
+        else if (c.case === 'device') this.snapshot.device = c.value;
+        else if (c.case === 'position') this.snapshot.position = c.value;
+        else if (c.case === 'bluetooth') this.snapshot.bluetooth = c.value;
+        break;
+      }
+      case 'moduleConfig': {
+        const m = event.moduleConfig.payloadVariant;
+        if (m.case === 'telemetry') this.snapshot.telemetry = m.value;
+        break;
+      }
       case 'nodeInfo':
         this.nodes.set(event.node.num, event.node);
         this.nodeChanges.emit(event.node);

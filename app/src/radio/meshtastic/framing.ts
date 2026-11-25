@@ -16,7 +16,10 @@ import {
 import {
   AdminMessageSchema,
   SharedContactSchema,
+  type AdminMessage,
 } from './proto/meshtastic/admin_pb';
+import type { Config } from './proto/meshtastic/config_pb';
+import type { ModuleConfig } from './proto/meshtastic/module_config_pb';
 import { PortNum } from './proto/meshtastic/portnums_pb';
 import { DEFAULT_HOP_LIMIT, WAVEPOD_PORTNUM } from './constants';
 
@@ -51,6 +54,8 @@ export type RadioEvent =
     }
   | { kind: 'routing'; requestId: number; from: number; error: Routing_Error }
   | { kind: 'queueStatus'; free: number; maxlen: number }
+  | { kind: 'config'; config: Config }
+  | { kind: 'moduleConfig'; moduleConfig: ModuleConfig }
   | { kind: 'rebooted' }
   | { kind: 'ignored'; reason: string };
 
@@ -124,6 +129,10 @@ export function decodeFromRadio(bytes: Uint8Array): RadioEvent {
         free: v.value.free,
         maxlen: v.value.maxlen,
       };
+    case 'config':
+      return { kind: 'config', config: v.value };
+    case 'moduleConfig':
+      return { kind: 'moduleConfig', moduleConfig: v.value };
     case 'rebooted':
       return { kind: 'rebooted' };
     case 'packet':
@@ -215,12 +224,24 @@ export function encodeAddContact(
   packetId: number,
   sharedContact: Uint8Array,
 ): Uint8Array {
-  const admin = create(AdminMessageSchema, {
-    payloadVariant: {
-      case: 'addContact',
-      value: fromBinary(SharedContactSchema, sharedContact),
-    },
-  });
+  return encodeAdmin(
+    myNodeNum,
+    packetId,
+    create(AdminMessageSchema, {
+      payloadVariant: {
+        case: 'addContact',
+        value: fromBinary(SharedContactSchema, sharedContact),
+      },
+    }),
+  );
+}
+
+/** Any AdminMessage addressed to our own module (local admin, no session key needed). */
+export function encodeAdmin(
+  myNodeNum: number,
+  packetId: number,
+  admin: AdminMessage,
+): Uint8Array {
   const packet = create(MeshPacketSchema, {
     id: packetId,
     to: myNodeNum,
