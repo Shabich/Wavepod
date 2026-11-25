@@ -1,15 +1,11 @@
 /**
- * Task 01 prototype screen: pick a role, connect to a module, pick the peer node,
- * send encrypted texts and watch radio and app acks.
+ * Prototype screen: pick a role, connect to a module, pick the peer node, then chat
+ * through the delivery engine (persistent outbox, retries, two-level acks).
+ * Test identities A/B stay until QR contacts exist (task 04).
  */
-import React, {
-  useCallback,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Button,
   FlatList,
   Pressable,
@@ -27,56 +23,90 @@ import {
   type FoundDevice,
 } from '../radio/meshtastic/bleLink';
 import type { ConnectionState } from '../radio/RadioInterface';
-import {
-  PrototypeSession,
-  type Role,
-  type ChatMessage,
-} from '../prototype/PrototypeSession';
-import { contactId } from '../crypto/envelope';
+import { DeliveryEngine } from '../delivery/engine';
+import type { StoredMessage, MessageStatus } from '../storage/delivery';
+import type { SqlDatabase } from '../storage/types';
 import { MAX_PLAINTEXT_LENGTH } from '../protocol/codec';
 import { runSelfTest } from '../prototype/selfTest';
+import { testIdentity, type Role } from '../prototype/testIdentities';
 import { runStorageSelfTest } from '../storage/selfTest';
 import type { WavepodIdentity } from '../crypto/identity';
 
 const OCEAN = '#1D6FA5';
 
-const STATUS_LABEL: Record<NonNullable<ChatMessage['status']>, string> = {
-  sending: 'envoi…',
+const STATUS_LABEL: Record<MessageStatus, string> = {
+  pending: 'en attente',
   sent: 'envoyé',
   moduleAck: 'reçu par le module',
   delivered: 'livré',
+  read: 'lu',
   failed: 'échec',
+  received: '',
 };
 
 const hex = (n: number) => (n >>> 0).toString(16).padStart(8, '0');
+const time = (t: number) => new Date(t).toISOString().slice(11, 19);
 
-export function PrototypeScreen({ identity }: { identity?: WavepodIdentity }) {
+interface Props {
+  identity?: WavepodIdentity;
+  db?: SqlDatabase;
+}
+
+export function PrototypeScreen({ identity, db }: Props) {
   const [role, setRole] = useState<Role | null>(null);
   const [selfTest] = useState(runSelfTest);
-  const [storageTest, setStorageTest] = useState<string>('stockage : test…');
-
-  useEffect(() => {
-    if (!identity) return;
-    runStorageSelfTest().then(r => setStorageTest(r.detail));
-  }, [identity]);
+  const [storageTest, setStorageTest] = useState('stockage : test…');
   const [devices, setDevices] = useState<FoundDevice[]>([]);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<ConnectionState>('disconnected');
   const [draft, setDraft] = useState('');
-  const [, rerender] = useReducer((x: number) => x + 1, 0);
+  const [peerId, setPeerId] = useState<string | null>(null);
+  const [peerNode, setPeerNode] = useState<number | null>(null);
+  const [messages, setMessages] = useState<StoredMessage[]>([]);
+  const [log, setLog] = useState<string[]>([]);
+  const [nodesVersion, setNodesVersion] = useState(0);
   const adapterRef = useRef<MeshtasticAdapter | null>(null);
-  const sessionRef = useRef<PrototypeSession | null>(null);
+  const engineRef = useRef<DeliveryEngine | null>(null);
   const stopScanRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!identity) return;
+    runStorageSelfTest().then(r => setStorageTest(r.detail));
+  }, [identity]);
 
   useEffect(
     () => () => {
       stopScanRef.current?.();
-      sessionRef.current?.dispose();
+      engineRef.current?.stop();
       void adapterRef.current?.stop();
     },
     [],
   );
+
+  const refreshMessages = useCallback(async () => {
+    const engine = engineRef.current;
+    if (!engine || !peerId) return;
+    setMessages(await engine.messages.listForContact(peerId));
+  }, [peerId]);
+
+  useEffect(() => {
+    refreshMessages();
+  }, [refreshMessages]);
+
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    return engine.onEvent(e => {
+      if (e.kind === 'log') {
+        setLog(prev =>
+          [`${time(Date.now())} ${e.line}`, ...prev].slice(0, 200),
+        );
+      } else {
+        refreshMessages();
+      }
+    });
+  }, [refreshMessages, state]);
 
   const startScan = useCallback(async () => {
     setError(null);
@@ -100,7 +130,7 @@ export function PrototypeScreen({ identity }: { identity?: WavepodIdentity }) {
 
   const connect = useCallback(
     async (device: FoundDevice) => {
-      if (!role) return;
+      if (!role || !db) return;
       stopScanRef.current?.();
       setScanning(false);
       setState('connecting');
@@ -108,32 +138,68 @@ export function PrototypeScreen({ identity }: { identity?: WavepodIdentity }) {
         const link = await connectToModule(device.id);
         const adapter = new MeshtasticAdapter(link);
         adapter.onConnectionState(setState);
-        adapter.onNode(() => rerender());
-        const session = new PrototypeSession(adapter, role);
-        session.onChange(rerender);
+        adapter.onNode(() => setNodesVersion(v => v + 1));
+        const engine = new DeliveryEngine({
+          radio: adapter,
+          me: testIdentity(role),
+          db,
+        });
+        const peerRole: Role = role === 'A' ? 'B' : 'A';
+        const peer = await engine.contacts.upsert({
+          publicKey: testIdentity(peerRole).publicKey,
+          name: `Téléphone ${peerRole}`,
+        });
         adapterRef.current = adapter;
-        sessionRef.current = session;
+        engineRef.current = engine;
+        setPeerId(peer.id);
+        setPeerNode(peer.nodeNum);
+        engine.start();
         await adapter.start();
       } catch (e) {
         setError(String(e));
         setState('disconnected');
       }
     },
-    [role],
+    [role, db],
+  );
+
+  const choosePeerNode = useCallback(
+    async (num: number) => {
+      const engine = engineRef.current;
+      if (!engine || !peerId) return;
+      setPeerNode(num);
+      // Choosing the node means "they are here": counts as a presence signal.
+      await engine.signal(peerId, num);
+    },
+    [peerId],
   );
 
   const send = useCallback(async () => {
-    const session = sessionRef.current;
-    if (!session || !draft.trim()) return;
+    const engine = engineRef.current;
+    if (!engine || !peerId || !draft.trim()) return;
     try {
-      await session.sendText(draft.trim());
+      await engine.sendText(peerId, draft.trim());
       setDraft('');
     } catch (e) {
       setError(String(e));
     }
-  }, [draft]);
+  }, [draft, peerId]);
 
-  const session = sessionRef.current;
+  const messageActions = (m: StoredMessage) => {
+    const engine = engineRef.current;
+    if (!engine || m.direction !== 'out' || !peerId) return;
+    if (m.status === 'delivered' || m.status === 'read') return;
+    Alert.alert('Message non livré', m.body, [
+      { text: 'Renvoyer', onPress: () => engine.resend(peerId, m.messageId) },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: () => engine.cancel(peerId, m.messageId),
+      },
+      { text: 'Fermer', style: 'cancel' },
+    ]);
+  };
+
   const adapter = adapterRef.current;
 
   if (!role) {
@@ -160,7 +226,11 @@ export function PrototypeScreen({ identity }: { identity?: WavepodIdentity }) {
     );
   }
 
-  if (!session || state === 'disconnected' || state === 'connecting') {
+  if (
+    !engineRef.current ||
+    state === 'connecting' ||
+    (state === 'disconnected' && !adapter)
+  ) {
     return (
       <View style={styles.screen}>
         <Text style={styles.title}>
@@ -191,35 +261,31 @@ export function PrototypeScreen({ identity }: { identity?: WavepodIdentity }) {
     : [];
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} key={nodesVersion}>
       <Text style={styles.title}>
-        Rôle {role} · {state === 'ready' ? 'prêt' : 'synchronisation…'}
+        Rôle {role} ·{' '}
+        {state === 'ready'
+          ? 'prêt'
+          : state === 'disconnected'
+          ? 'module déconnecté'
+          : 'synchronisation…'}
       </Text>
       <Text style={styles.muted}>
         Nœud {adapter?.localNode !== undefined ? hex(adapter.localNode) : '?'} ·
-        firmware {adapter?.firmwareVersion ?? '?'} · id{' '}
-        {contactId(session.me.publicKey)}
+        firmware {adapter?.firmwareVersion ?? '?'}
       </Text>
       {error && <Text style={styles.error}>{error}</Text>}
 
-      <Text style={styles.section}>Destinataire</Text>
+      <Text style={styles.section}>Nœud du destinataire</Text>
       <ScrollView horizontal style={styles.peers}>
         {peers.map(n => (
           <Pressable
             key={n.num}
-            style={[
-              styles.chip,
-              session.peerNode === n.num && styles.chipActive,
-            ]}
-            onPress={() => {
-              session.peerNode = n.num;
-              rerender();
-            }}
+            style={[styles.chip, peerNode === n.num && styles.chipActive]}
+            onPress={() => choosePeerNode(n.num)}
           >
             <Text
-              style={
-                session.peerNode === n.num ? styles.chipTextActive : undefined
-              }
+              style={peerNode === n.num ? styles.chipTextActive : undefined}
             >
               {n.shortName || hex(n.num)} {n.longName ? `· ${n.longName}` : ''}
             </Text>
@@ -232,31 +298,31 @@ export function PrototypeScreen({ identity }: { identity?: WavepodIdentity }) {
 
       <FlatList
         style={styles.messages}
-        data={[...session.messages].reverse()}
+        data={[...messages].reverse()}
         keyExtractor={m => `${m.direction}-${m.messageId}`}
         inverted
         renderItem={({ item }) => (
-          <View
+          <Pressable
+            onPress={() => messageActions(item)}
             style={[
               styles.bubble,
               item.direction === 'out' ? styles.out : styles.in,
             ]}
           >
             <Text style={item.direction === 'out' ? styles.outText : undefined}>
-              {item.text}
+              {item.body}
             </Text>
             <Text
               style={[styles.meta, item.direction === 'out' && styles.outText]}
             >
+              {time(item.createdAt)}
               {item.direction === 'out'
-                ? `${STATUS_LABEL[item.status ?? 'sending']}${
-                    item.error ? ` · ${item.error}` : ''
+                ? ` · ${STATUS_LABEL[item.status]}${
+                    item.error ? ` (${item.error})` : ''
                   }`
-                : `SNR ${item.rxSnr ?? '?'} · RSSI ${
-                    item.rxRssi ?? '?'
-                  } · sauts ${item.hops ?? '?'}`}
+                : ''}
             </Text>
-          </View>
+          </Pressable>
         )}
       />
 
@@ -271,14 +337,14 @@ export function PrototypeScreen({ identity }: { identity?: WavepodIdentity }) {
         <Button
           title="Envoyer"
           onPress={send}
-          disabled={state !== 'ready' || session.peerNode === undefined}
+          disabled={peerNode === null}
           color={OCEAN}
         />
       </View>
 
       <Text style={styles.section}>Journal</Text>
       <ScrollView style={styles.log}>
-        {session.log.map((line, i) => (
+        {log.map((line, i) => (
           <Text key={i} style={styles.logLine}>
             {line}
           </Text>

@@ -87,7 +87,7 @@ export function AppRoot() {
       </View>
     );
   }
-  return <PrototypeScreen identity={state.app.identity} />;
+  return <PrototypeScreen identity={state.app.identity} db={state.app.db} />;
 }
 
 const styles = StyleSheet.create({
