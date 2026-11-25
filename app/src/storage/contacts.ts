@@ -12,6 +12,7 @@ export interface Contact {
   nodeNum: number | null;
   verified: boolean;
   lastSeenAt: number | null;
+  lastProbeAt: number | null;
   createdAt: number;
 }
 
@@ -85,6 +86,13 @@ export class ContactsRepository {
     );
   }
 
+  async setLastProbe(id: string, at: number) {
+    await this.db.execute(
+      'UPDATE contacts SET last_probe_at = ? WHERE id = ?',
+      [at, id],
+    );
+  }
+
   async setVerified(id: string, verified: boolean) {
     await this.db.execute('UPDATE contacts SET verified = ? WHERE id = ?', [
       verified ? 1 : 0,
@@ -107,6 +115,10 @@ function toContact(r: SqlRow): Contact {
     nodeNum: r.node_num === null ? null : Number(r.node_num),
     verified: Number(r.verified) === 1,
     lastSeenAt: r.last_seen_at === null ? null : Number(r.last_seen_at),
+    lastProbeAt:
+      r.last_probe_at === null || r.last_probe_at === undefined
+        ? null
+        : Number(r.last_probe_at),
     createdAt: Number(r.created_at),
   };
 }

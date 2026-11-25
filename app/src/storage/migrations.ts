@@ -54,6 +54,15 @@ export const MIGRATIONS: string[][] = [
     )`,
     `CREATE INDEX dedup_seen_at ON dedup(seen_at)`,
   ],
+  // 2: delivery engine (task 05)
+  [
+    `ALTER TABLE outbox ADD COLUMN burst_attempts INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE outbox ADD COLUMN last_attempt_at INTEGER`,
+    `ALTER TABLE outbox ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE outbox ADD COLUMN forced INTEGER NOT NULL DEFAULT 0`,
+    `CREATE INDEX outbox_packet ON outbox(packet_id)`,
+    `ALTER TABLE contacts ADD COLUMN last_probe_at INTEGER`,
+  ],
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
