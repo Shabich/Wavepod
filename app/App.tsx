@@ -5,14 +5,14 @@
 import React from 'react';
 import { StatusBar, StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { PrototypeScreen } from './src/screens/PrototypeScreen';
+import { AppRoot } from './src/app/AppRoot';
 
 function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container}>
-        <PrototypeScreen />
+        <AppRoot />
       </SafeAreaView>
     </SafeAreaProvider>
   );

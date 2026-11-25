@@ -35,6 +35,8 @@ import {
 import { contactId } from '../crypto/envelope';
 import { MAX_PLAINTEXT_LENGTH } from '../protocol/codec';
 import { runSelfTest } from '../prototype/selfTest';
+import { runStorageSelfTest } from '../storage/selfTest';
+import type { WavepodIdentity } from '../crypto/identity';
 
 const OCEAN = '#1D6FA5';
 
@@ -48,9 +50,15 @@ const STATUS_LABEL: Record<NonNullable<ChatMessage['status']>, string> = {
 
 const hex = (n: number) => (n >>> 0).toString(16).padStart(8, '0');
 
-export function PrototypeScreen() {
+export function PrototypeScreen({ identity }: { identity?: WavepodIdentity }) {
   const [role, setRole] = useState<Role | null>(null);
   const [selfTest] = useState(runSelfTest);
+  const [storageTest, setStorageTest] = useState<string>('stockage : test…');
+
+  useEffect(() => {
+    if (!identity) return;
+    runStorageSelfTest().then(r => setStorageTest(r.detail));
+  }, [identity]);
   const [devices, setDevices] = useState<FoundDevice[]>([]);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,6 +143,14 @@ export function PrototypeScreen() {
         <Text style={selfTest.ok ? styles.muted : styles.error}>
           {selfTest.detail}
         </Text>
+        {identity && (
+          <>
+            <Text style={styles.muted}>{storageTest}</Text>
+            <Text style={styles.muted}>
+              Ton identité : {identity.contactId}
+            </Text>
+          </>
+        )}
         <Text style={styles.muted}>Choisis le rôle de ce téléphone</Text>
         <View style={styles.row}>
           <RoleButton label="Téléphone A" onPress={() => setRole('A')} />
