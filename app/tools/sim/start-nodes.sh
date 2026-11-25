@@ -5,6 +5,9 @@
 set -euo pipefail
 
 IMAGE="${MESHTASTICD_IMAGE:-meshtastic/meshtasticd:latest}"
+# --raw: leave the region UNSET (fresh module) so Wavepod provisioning can be tested.
+RAW=0
+[ "${1:-}" = "--raw" ] && RAW=1
 NET=wpsim
 
 docker network inspect "$NET" >/dev/null 2>&1 || docker network create "$NET" >/dev/null
@@ -23,7 +26,11 @@ sleep 4
 # Region EU_868 (a fresh node does not transmit with region UNSET) and UDP mesh between containers.
 # Uses the official Meshtastic Python CLI: pip install meshtastic
 for port in 4403 4404; do
-  meshtastic --host "localhost:$port" --set lora.region EU_868 --set network.enabled_protocols 1 >/dev/null
+  if [ "$RAW" = 1 ]; then
+    meshtastic --host "localhost:$port" --set network.enabled_protocols 1 >/dev/null
+  else
+    meshtastic --host "localhost:$port" --set lora.region EU_868 --set network.enabled_protocols 1 >/dev/null
+  fi
 done
 
 # The config change triggers a reboot a few seconds later: wait for Docker to
