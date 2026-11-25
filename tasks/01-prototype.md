@@ -12,6 +12,7 @@ Objectif : un message texte chiffré par Wavepod, transporté par Meshtastic ent
 - [x] **[code]** Écrire le traitement de la trame Meshtastic (`ToRadio` et `FromRadio`, port 256), testé sans BLE.
 - [x] **[code]** Écrire le transport BLE (`react-native-ble-plx`) : scan, connexion, `want_config_id`, lecture et écriture.
 - [x] **[code]** Écrire l'écran de prototype, avec un autotest au démarrage (chiffrement et protobuf sous Hermes).
+- [x] **[code]** Simulation : 20 messages sur 20 livrés et déchiffrés entre deux nœuds `meshtasticd` (firmware 2.7.26), via TCP (`app/tools/sim/`).
 - [ ] **[terrain]** Installer sur deux iPhones (ou un iPhone et un Android), appairer deux T1000-E réglés en `EU_868`.
 - [ ] **[terrain]** Envoyer 20 messages à 500 m en vue directe, et capturer depuis un troisième nœud pour vérifier qu'aucun texte n'apparaît en clair.
 
@@ -30,6 +31,8 @@ Objectif : un message texte chiffré par Wavepod, transporté par Meshtastic ent
 7. **Rapport** : noter pour chaque message le statut final, le SNR et le RSSI affichés côté réception, la distance et l'environnement. Me transmettre le journal en cas d'échec.
 
 ## Notes
+
+- Constat de la simulation : si le module redémarre, l'adaptateur passe en « déconnecté » sans se reconnecter, et le message en cours reste « envoyé ». À traiter en tâches 05 (outbox) et 07 (reconnexion).
 
 - Les clés de test A et B sont en dur et identiques sur tous les téléphones : sécurité nulle, pour le prototype seulement (remplacé en tâche 03).
 - Port 256 (`PRIVATE_APP`) : réservé au développement, il faudra demander un numéro dédié à Meshtastic.

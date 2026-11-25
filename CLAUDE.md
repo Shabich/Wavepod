@@ -75,3 +75,7 @@ Instructions pour travailler sur Wavepod. Le document de référence est `WAVEPO
 | TTL | Durée de vie maximale d'un message en attente |
 | AEAD | Chiffrement authentifié (ChaCha20-Poly1305, AES-GCM…) |
 | Pod | Groupe de personnes à portée radio, l'unité sociale de Wavepod |
+
+## Simulation
+
+`app/tools/sim/` fait tourner deux nœuds `meshtasticd --sim` dans Docker (`npm run sim:start`, `npm run sim:test`). À lancer après toute modification de l'adaptateur Meshtastic ou de la session. Limites : pas de BLE, pas de radio, pas de PKI Meshtastic (voir `app/tools/sim/README.md`).
