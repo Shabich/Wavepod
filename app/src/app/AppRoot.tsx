@@ -18,7 +18,7 @@ import {
   type Bootstrapped,
 } from '../storage/bootstrap';
 import { KeychainSecretStore, OpSqliteFactory } from '../storage/native';
-import { PrototypeScreen } from '../screens/PrototypeScreen';
+import { AppNavigator } from '../ui/AppNavigator';
 
 type State =
   | { kind: 'loading' }
@@ -87,7 +87,7 @@ export function AppRoot() {
       </View>
     );
   }
-  return <PrototypeScreen identity={state.app.identity} db={state.app.db} />;
+  return <AppNavigator identity={state.app.identity} db={state.app.db} />;
 }
 
 const styles = StyleSheet.create({

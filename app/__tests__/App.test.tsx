@@ -13,6 +13,6 @@ test('renders correctly', async () => {
 });
 
 test('self-test passes', () => {
-  const { runSelfTest } = require('../src/prototype/selfTest');
+  const { runSelfTest } = require('../src/diagnostics/cryptoSelfTest');
   expect(runSelfTest()).toMatchObject({ ok: true });
 });
