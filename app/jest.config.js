@@ -3,5 +3,5 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@noble)/)',
   ],
-  testPathIgnorePatterns: ['/node_modules/', '/ios/', '/android/', '/__tests__/helpers.ts'],
+  testPathIgnorePatterns: ['/node_modules/', '/ios/', '/android/', '/__tests__/helpers.ts', '/__tests__/nodeSqlite.ts'],
 };
