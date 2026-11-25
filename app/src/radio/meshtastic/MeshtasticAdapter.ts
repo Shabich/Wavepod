@@ -17,7 +17,9 @@ import type {
 import { randomMessageId } from '../../crypto/envelope';
 import {
   decodeFromRadio,
+  encodeAddContact,
   encodePacket,
+  encodeSharedContact,
   encodeWantConfig,
   routingErrorName,
   type NodeSummary,
@@ -118,6 +120,24 @@ export class MeshtasticAdapter implements RadioInterface {
       }),
     );
     return id;
+  }
+
+  /** Our module as a Meshtastic SharedContact, for the QR card. Null until synced. */
+  ownSharedContact(): Uint8Array | null {
+    if (this.myNodeNum === undefined) return null;
+    const me = this.nodes.get(this.myNodeNum);
+    if (!me?.userBytes) return null;
+    return encodeSharedContact(this.myNodeNum, me.userBytes);
+  }
+
+  /** Stores a contact's node and PKI key in our module (AdminMessage.add_contact). */
+  async addContact(sharedContact: Uint8Array): Promise<void> {
+    if (this.state !== 'ready' || this.myNodeNum === undefined) {
+      throw new Error(`radio not ready (${this.state})`);
+    }
+    await this.link.writeToRadio(
+      encodeAddContact(this.myNodeNum, randomMessageId() || 1, sharedContact),
+    );
   }
 
   onReceive(l: Listener<RadioPacket>) {

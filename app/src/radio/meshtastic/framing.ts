@@ -10,8 +10,13 @@ import {
   RoutingSchema,
   Routing_Error,
   ToRadioSchema,
+  UserSchema,
   type MeshPacket,
 } from './proto/meshtastic/mesh_pb';
+import {
+  AdminMessageSchema,
+  SharedContactSchema,
+} from './proto/meshtastic/admin_pb';
 import { PortNum } from './proto/meshtastic/portnums_pb';
 import { DEFAULT_HOP_LIMIT, WAVEPOD_PORTNUM } from './constants';
 
@@ -21,6 +26,10 @@ export interface NodeSummary {
   shortName: string;
   lastHeard: number;
   snr: number;
+  /** Module PKI public key (32 bytes), empty if unknown. */
+  publicKey: Uint8Array;
+  /** Raw User protobuf, kept to build SharedContact cards. */
+  userBytes: Uint8Array | null;
 }
 
 export type RadioEvent =
@@ -101,6 +110,8 @@ export function decodeFromRadio(bytes: Uint8Array): RadioEvent {
           shortName: v.value.user?.shortName ?? '',
           lastHeard: v.value.lastHeard,
           snr: v.value.snr,
+          publicKey: v.value.user?.publicKey ?? new Uint8Array(0),
+          userBytes: v.value.user ? toBinary(UserSchema, v.value.user) : null,
         },
       };
     case 'configCompleteId':
@@ -160,4 +171,73 @@ function decodeMeshPacket(packet: MeshPacket): RadioEvent {
 
 export function routingErrorName(error: Routing_Error): string {
   return Routing_Error[error] ?? `ERROR_${error}`;
+}
+
+/** Meshtastic SharedContact (same bytes as the meshtastic.org/v/# links). */
+export function encodeSharedContact(
+  nodeNum: number,
+  userBytes: Uint8Array,
+): Uint8Array {
+  return toBinary(
+    SharedContactSchema,
+    create(SharedContactSchema, {
+      nodeNum,
+      user: fromBinary(UserSchema, userBytes),
+      manuallyVerified: true,
+    }),
+  );
+}
+
+export interface SharedContactInfo {
+  nodeNum: number;
+  longName: string;
+  shortName: string;
+  publicKey: Uint8Array;
+}
+
+export function decodeSharedContact(bytes: Uint8Array): SharedContactInfo {
+  const c = fromBinary(SharedContactSchema, bytes);
+  if (!c.nodeNum || !c.user) throw new Error('incomplete shared contact');
+  return {
+    nodeNum: c.nodeNum,
+    longName: c.user.longName,
+    shortName: c.user.shortName,
+    publicKey: c.user.publicKey,
+  };
+}
+
+/**
+ * AdminMessage.add_contact sent to our own module: stores the contact's node and
+ * PKI public key in its NodeDB, so it can send PKI direct messages right away.
+ */
+export function encodeAddContact(
+  myNodeNum: number,
+  packetId: number,
+  sharedContact: Uint8Array,
+): Uint8Array {
+  const admin = create(AdminMessageSchema, {
+    payloadVariant: {
+      case: 'addContact',
+      value: fromBinary(SharedContactSchema, sharedContact),
+    },
+  });
+  const packet = create(MeshPacketSchema, {
+    id: packetId,
+    to: myNodeNum,
+    wantAck: false,
+    payloadVariant: {
+      case: 'decoded',
+      value: create(DataSchema, {
+        portnum: PortNum.ADMIN_APP,
+        payload: toBinary(AdminMessageSchema, admin),
+        wantResponse: false,
+      }),
+    },
+  });
+  return toBinary(
+    ToRadioSchema,
+    create(ToRadioSchema, {
+      payloadVariant: { case: 'packet', value: packet },
+    }),
+  );
 }

@@ -13,6 +13,8 @@ export interface Contact {
   verified: boolean;
   lastSeenAt: number | null;
   lastProbeAt: number | null;
+  /** Meshtastic SharedContact of the contact's module, re-injected into our module. */
+  meshContact: Uint8Array | null;
   createdAt: number;
 }
 
@@ -21,6 +23,7 @@ export interface NewContact {
   signKey?: Uint8Array;
   name: string;
   nodeNum?: number;
+  meshContact?: Uint8Array;
 }
 
 export class ContactsRepository {
@@ -35,12 +38,13 @@ export class ContactsRepository {
       throw new Error('public key must be 32 bytes');
     const id = contactId(c.publicKey);
     await this.db.execute(
-      `INSERT INTO contacts (id, public_key, sign_key, key_hint, name, node_num, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO contacts (id, public_key, sign_key, key_hint, name, node_num, mesh_contact, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          name = excluded.name,
          sign_key = COALESCE(excluded.sign_key, contacts.sign_key),
-         node_num = COALESCE(excluded.node_num, contacts.node_num)`,
+         node_num = COALESCE(excluded.node_num, contacts.node_num),
+         mesh_contact = COALESCE(excluded.mesh_contact, contacts.mesh_contact)`,
       [
         id,
         c.publicKey,
@@ -48,6 +52,7 @@ export class ContactsRepository {
         keyHint(c.publicKey),
         c.name,
         c.nodeNum ?? null,
+        c.meshContact ?? null,
         this.now(),
       ],
     );
@@ -119,6 +124,7 @@ function toContact(r: SqlRow): Contact {
       r.last_probe_at === null || r.last_probe_at === undefined
         ? null
         : Number(r.last_probe_at),
+    meshContact: (r.mesh_contact as Uint8Array | null | undefined) ?? null,
     createdAt: Number(r.created_at),
   };
 }

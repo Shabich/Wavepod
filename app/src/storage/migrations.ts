@@ -63,6 +63,8 @@ export const MIGRATIONS: string[][] = [
     `CREATE INDEX outbox_packet ON outbox(packet_id)`,
     `ALTER TABLE contacts ADD COLUMN last_probe_at INTEGER`,
   ],
+  // 3: QR contacts (task 04)
+  [`ALTER TABLE contacts ADD COLUMN mesh_contact BLOB`],
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
