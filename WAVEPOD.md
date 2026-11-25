@@ -285,16 +285,16 @@ Elle passe par des `AdminMessage` locaux (`set_config`, `set_channel`, `set_owne
 | Preset | LongFast (ou celui retenu après la tâche 2 de `PLAN.md`) | Même preset pour tout le groupe |
 | Nombre de sauts | 3 | Limite la congestion |
 | Rôle | `CLIENT`, ou `CLIENT_MUTE` en zone dense | Évite les relais inutiles |
-| Canal principal | Canal privé avec une clé aléatoire, partagé par QR au sein du pod | Isole le trafic du canal public (À arbitrer, voir Routage) |
-| Nom du module | Nom neutre généré (par exemple « WP-3F2A ») | Ne révèle pas l'identité dans NodeInfo |
-| Position et GPS | Désactivés par défaut | Vie privée par défaut |
+| Canal principal | Inchangé (canal par défaut) | Décision provisoire : le contenu est déjà chiffré de bout en bout, et un canal privé couperait le relais par les nœuds publics (voir `tasks/08-configuration-mvp.md`) |
+| Position et GPS | Désactivés | Vie privée par défaut |
+| Nom du module | `WP-XXXX` | Implémenté (fin du numéro de nœud) |
 | Télémétrie | Désactivée, ou intervalle long | Économie de temps d'antenne |
 | Intervalle NodeInfo | Défaut Meshtastic ou plus long | Équilibre entre présence et temps d'antenne |
 
-Avant d'écrire, Wavepod lit la configuration existante et prévient l'utilisateur si le module était déjà configuré pour un autre usage. Il garde une copie de cette configuration pour pouvoir la restaurer.
+Avant d'écrire, Wavepod lit la configuration existante et prévient l'utilisateur si le module était déjà configuré pour un autre usage. Il garde une copie de cette configuration pour pouvoir la restaurer. Implémenté : une seule transaction d'administration, donc un seul redémarrage, puis reconnexion automatique. Un module neuf est configuré sans question, et une restauration est proposée.
 
 ### Appairage BLE et PIN
-- Le T1000-E n'a pas d'écran : il utilise probablement un PIN fixe (souvent `123456`) au lieu d'un PIN aléatoire affiché (À valider). Le mode de PIN est réglable dans la configuration Bluetooth du module.
+- Le T1000-E n'a pas d'écran : le firmware le met en PIN fixe (`FIXED_PIN`) au lieu d'un PIN aléatoire affiché (confirmé dans `NodeDB.cpp`, v2.8.2 ; la valeur par défaut est souvent `123456`, À valider sur le module). Décision : Wavepod ne modifie pas le PIN.
 - Ce PIN ne protège que l'accès au module. Les clés Wavepod ne transitent jamais par le module, donc un PIN faible n'expose pas le contenu des messages. Il permet en revanche à un tiers proche de lire la configuration et la liste des nœuds, ou d'envoyer des paquets sous l'identité Meshtastic du module.
 - Piste : remplacer le PIN fixe par un PIN aléatoire choisi par Wavepod lors de la première configuration (À valider : comportement sans écran et procédure de récupération).
 

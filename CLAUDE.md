@@ -78,4 +78,4 @@ Instructions pour travailler sur Wavepod. Le document de référence est `WAVEPO
 
 ## Simulation
 
-`app/tools/sim/` fait tourner deux nœuds `meshtasticd --sim` dans Docker (`npm run sim:start`, `npm run sim:test`). À lancer après toute modification de l'adaptateur Meshtastic ou de la session. Limites : pas de BLE, pas de radio, pas de PKI Meshtastic (voir `app/tools/sim/README.md`).
+`app/tools/sim/` fait tourner deux nœuds `meshtasticd --sim` dans Docker (`npm run sim:start`, `npm run sim:test`). À lancer après toute modification de l'adaptateur Meshtastic ou du moteur de livraison. `npm run sim:start -- --raw` démarre des nœuds neufs (région `UNSET`) pour tester la configuration avec `tools/sim/provision-check.ts`. Limites : pas de BLE, pas de radio, pas de PKI Meshtastic (voir `app/tools/sim/README.md`).
