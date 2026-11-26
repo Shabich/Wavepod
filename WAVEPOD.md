@@ -252,6 +252,7 @@ Affichage utilisateur : en attente, envoyé, livré, lu, échoué. Le niveau « 
 - Les optimisations de batterie de certains constructeurs tuent les services. Il faut guider l'utilisateur pour l'exclusion.
 
 ### Messages manqués
+- Implémenté en tâche 07 (voir `docs/arriere-plan.md`). File du module vers le téléphone : 16 paquets sur nRF52840 (firmware 2.8.2), les plus anciens perdus au-delà.
 - Comparer les identifiants de paquet, les accusés manquants et le `last_heard` du contact pour signaler « messages possiblement manqués pendant la déconnexion ».
 - Bandeau visible quand le module est déconnecté depuis plus de N minutes.
 

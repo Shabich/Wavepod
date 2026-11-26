@@ -14,5 +14,5 @@ Marqueurs :
 | 04 | [Contacts par QR code](04-contacts-qr.md) | Code terminé sauf caméra Android, test terrain à faire (branche `task-04-contacts`) |
 | 05 | [Outbox et livraison fiable](05-outbox.md) | Code terminé, test terrain à faire (branche `task-05-outbox`) |
 | 06 | [Présence](06-presence.md) | À faire |
-| 07 | [Arrière-plan et messages manqués](07-arriere-plan.md) | À faire |
+| 07 | [Arrière-plan et messages manqués](07-arriere-plan.md) | Code terminé, test terrain à faire (branche `task-07-background`) |
 | 08 | [Configuration du module et test MVP](08-configuration-mvp.md) | Code terminé, tests terrain à faire (branche `task-08-provisioning`) |
