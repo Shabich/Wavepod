@@ -158,7 +158,7 @@ Hypothèse de calcul : réglage LongFast (SF11, 250 kHz, CR 4/5). Un paquet de 6
 | Statut court | 1 octet (code prédéfini) ou 30 octets libres | 4 par heure | Codes : randonnée, besoin d'aide, OK… |
 | Profil (pseudo et bio) | jusqu'à 120 octets | À l'ajout, puis sur demande | Bio envoyée une seule fois |
 | Avatar | 0 octet | Jamais émis | Généré depuis la clé, ou photo stockée localement |
-| Balise de présence | environ 40 octets | 2 à 4 par heure | Optionnelle |
+| Balise de présence | 9 octets (31 à l'antenne, 0,48 s) | 2 à 4 par heure | Optionnelle, coupée en mode discret |
 | Check-in avec position | environ 45 octets | 6 par heure | Position réduite (environ 10 m) |
 | « Autour de moi » | 0 octet | Passif | Construit à partir des paquets entendus |
 
@@ -185,7 +185,9 @@ Consomment aussi du temps d'antenne : accusés, retries, relais, balises Wavepod
 - Tout paquet reçu d'un contact (message, accusé, NodeInfo) remet à jour son « vu ».
 - Par défaut, pas de position dans la balise. Un mode discret coupe complètement la balise.
 - Réutilisation de Meshtastic : les paquets NodeInfo (par défaut toutes les 3 heures, À valider) et `last_heard` dans la base de nœuds du module donnent un signal gratuit. La balise Wavepod reste utile pour la fréquence et pour lier le nœud à l'identité Wavepod de façon chiffrée.
-- Balise chiffrée pour les contacts : pour ne pas révéler qui est qui, la balise contient un jeton rotatif que seuls les contacts savent associer (À étudier, coût en calcul faible).
+- **Implémenté (tâche 06)** : balise de 9 octets diffusée, avec un jeton HMAC qui change tous les quarts d'heure. La clé de balise est envoyée à chaque contact dans un message « bonjour » chiffré. Seuls les contacts reconnaissent la balise. Un tiers ne peut ni la falsifier ni la relier à une identité Wavepod, mais il voit le nœud émetteur dans l'en-tête Meshtastic.
+- Mesuré par calcul : 0,48 s d'antenne par balise à LongFast, soit environ 0,4 % du budget horaire à une balise toutes les 20 min.
+- Tout paquet entendu du module d'un contact met aussi à jour son « vu » (indice non authentifié).
 
 ## Livraison fiable
 
