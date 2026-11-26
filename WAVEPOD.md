@@ -101,7 +101,7 @@ Principes :
 - **Décision** : chaque message est chiffré et authentifié sur le téléphone avant d'être remis au module.
 - Identité : paire X25519 (échange) et Ed25519 (signature, utile pour les QR et les groupes), générée sur le téléphone et stockée dans le Keychain ou le Keystore. Promesse produit : « tes clés ne quittent jamais ton téléphone ».
 - Conversation à deux : clé partagée = HKDF-SHA256(X25519(moi, contact), « wavepod/v1/dm » et les deux clés publiques triées). Chiffrement AEAD ChaCha20-Poly1305. Bibliothèques : `@noble/curves`, `@noble/ciphers` et `@noble/hashes` (voir `PLAN.md`).
-- Groupes (v1) : clé symétrique de groupe distribuée par messages privés chiffrés. Limite : un membre peut se faire passer pour un autre membre. Une signature par message (64 octets) est trop coûteuse et serait réservée aux messages sensibles.
+- Groupes (implémentés, tâche 10) : clé symétrique de groupe distribuée par messages privés chiffrés. Chaque message part en une seule diffusion, chaque membre renvoie un accusé au nœud de l'expéditeur, et les membres silencieux reçoivent une copie directe après 2 min. Limites : un membre peut se faire passer pour un autre membre (pas de signature par message, 64 octets trop coûteux), et pas encore de rotation de clé au départ d'un membre.
 - Confidentialité persistante : à étudier plus tard (rotation périodique de clés négociée hors bande ou par échange léger). Le faible débit rend un ratchet complet coûteux en accusés.
 
 ### Format de message compact (proposition)

@@ -16,6 +16,6 @@ Marqueurs :
 | 06 | [Présence](06-presence.md) | Code terminé, mesure terrain à faire (branche `task-06-presence`) |
 | 07 | [Arrière-plan et messages manqués](07-arriere-plan.md) | Code terminé, test terrain à faire (branche `task-07-background`) |
 | 08 | [Configuration du module et test MVP](08-configuration-mvp.md) | Code terminé, tests terrain à faire (branche `task-08-provisioning`) |
-| 09 | [Profil et avatars](09-profil.md) | Code terminé, test terrain à faire (branche `task-09-profile`) |
-| 10 | [Messages de groupe](10-groupes.md) | À faire |
+| 09 | [Profil et avatars](09-profil.md) | Code terminé, test terrain à faire |
+| 10 | [Messages de groupe](10-groupes.md) | Code terminé sauf retrait de membre, test terrain à faire (branche `task-10-groups`) |
 | 11 | [Position et cartes hors ligne](11-position-carte.md) | À faire, hébergement à décider |
