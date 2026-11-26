@@ -26,7 +26,3 @@ Contrastes (WCAG) : blanc sur `primary` 5,6, `slate` sur blanc 6,2, `slate` sur 
   - `sans-fond` (orque blanche) sert pour l'écran de lancement iOS et pour l'icône adaptative Android.
 
 Les fichiers dérivés sont générés à partir de ces sources (redimensionnement, recadrage sur le contenu). À refaire si le logo change.
-
-## Ancien logo
-
-`wavepod-svg/` (dauphin, bleu océan `#1D6FA5`) est remplacé par l'orque. Il est conservé tant que sa suppression n'a pas été décidée.

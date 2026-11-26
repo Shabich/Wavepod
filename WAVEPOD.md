@@ -379,7 +379,7 @@ Risque : l'application Meshtastic s'améliore vite. La plus-value doit rester l'
 
 - Nom : ondes radio et « pod », le groupe de cétacés. Le logo est une orque, dont les groupes s'appellent aussi des pods.
 - **Logo** : orque blanche dans une bulle de conversation, sur fond indigo (`brand/`).
-- **Couleurs** : indigo `#4F64AA` (principale), indigo foncé `#384986`, nuit `#1B2340`, ardoise `#5A6178`, brume `#EEF1F9`. Détail, usages et contrastes dans `brand/README.md`. Elles remplacent le bleu océan `#1D6FA5` et le dauphin de `wavepod-svg/`.
+- **Couleurs** : indigo `#4F64AA` (principale), indigo foncé `#384986`, nuit `#1B2340`, ardoise `#5A6178`, brume `#EEF1F9`. Détail, usages et contrastes dans `brand/README.md`. Elles remplacent le bleu océan `#1D6FA5` et l'ancien logo dauphin.
 - **Icône d'application** : iOS (1024 px, sans transparence) et Android (icônes classiques et ronde, icône adaptative à fond indigo).
 - **Écran de lancement iOS** : orque blanche sur fond indigo.
 - Ton : simple, rassurant, factuel. Vocabulaire grand public (« à portée », « vu il y a », « livré ») plutôt que radio (« SNR », « hop »).
