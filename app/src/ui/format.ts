@@ -19,3 +19,12 @@ export function timeLabel(t: number): string {
     d.getMinutes(),
   ).padStart(2, '0')}`;
 }
+
+/** "4 min", "2 h", "3 j": how long something has lasted. */
+export function durationLabel(ms: number): string {
+  const m = Math.max(1, Math.round(ms / 60_000));
+  if (m < 60) return `${m} min`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} h`;
+  return `${Math.round(h / 24)} j`;
+}

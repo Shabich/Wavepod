@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { AppServices } from '../../app/services';
 import type { Contact } from '../../storage/contacts';
-import { Avatar, Logo, PrimaryButton } from '../components';
+import { Avatar, LinkBanner, Logo, PrimaryButton } from '../components';
 import { lastSeenLabel } from '../format';
-import { useEngineTick, useModuleState } from '../hooks';
+import { useEngineTick, useLink, useModuleState } from '../hooks';
 import type { Navigate } from '../navigation';
 import { MetaRepository } from '../../storage/meta';
 import { useStyles, useTheme, type Colors } from '../theme';
@@ -21,6 +21,7 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
   const styles = useStyles(makeStyles);
   const tick = useEngineTick(s);
   const moduleState = useModuleState(s);
+  const link = useLink(s);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [pending, setPending] = useState<Record<string, number>>({});
   const [steps, setSteps] = useState<{
@@ -75,6 +76,8 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
         <Text style={styles.wordmark}>Wavepod</Text>
       </View>
 
+      <LinkBanner state={link.state} since={link.since} />
+
       {steps && (
         <View style={ui.card}>
           <Text style={ui.heading}>Pour commencer</Text>
@@ -103,7 +106,11 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
       >
         <View style={[styles.dot, moduleState === 'ready' && styles.dotOk]} />
         <View style={styles.flex}>
-          <Text style={ui.heading}>{MODULE_LABEL[moduleState]}</Text>
+          <Text style={ui.heading}>
+            {link.state === 'reconnecting'
+              ? 'Reconnexion au module…'
+              : MODULE_LABEL[moduleState]}
+          </Text>
           <Text style={ui.muted}>
             {s.moduleName() ?? 'Toucher pour choisir un module'}
           </Text>

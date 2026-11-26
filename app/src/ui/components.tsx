@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { radius, useStyles, useTheme, type Colors } from './theme';
+import { durationLabel } from './format';
 
 const LOGO = {
   light: require('./assets/orque.png'),
@@ -120,4 +121,45 @@ const makeStyles = (c: Colors) =>
     label: { color: c.onPrimary, fontSize: 16, fontWeight: '600' },
     secondaryLabel: { color: c.accent },
     header: { gap: 4 },
+  });
+
+/**
+ * Shown while the module has been out of reach for more than a minute: outgoing
+ * messages wait in the outbox, incoming ones sent meanwhile may be lost.
+ */
+export function LinkBanner({
+  state,
+  since,
+}: {
+  state: string;
+  since: number | null;
+}) {
+  const { ui } = useTheme();
+  const styles = useStyles(makeBannerStyles);
+  if (state !== 'reconnecting' || since === null) return null;
+  const down = Date.now() - since;
+  if (down < 60_000) return null;
+  return (
+    <View style={styles.banner} accessibilityRole="alert">
+      <Text style={ui.heading}>
+        Module hors de portée depuis {durationLabel(down)}
+      </Text>
+      <Text style={ui.muted}>
+        Tes messages partiront dès son retour. Ceux qu’on t’envoie pendant la
+        coupure peuvent être perdus : demande-les à nouveau si besoin.
+      </Text>
+    </View>
+  );
+}
+
+const makeBannerStyles = (c: Colors) =>
+  StyleSheet.create({
+    banner: {
+      backgroundColor: c.surface,
+      borderLeftWidth: 4,
+      borderLeftColor: c.danger,
+      borderRadius: 12,
+      padding: 12,
+      gap: 4,
+    },
   });

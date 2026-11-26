@@ -14,9 +14,9 @@ import type { AppServices } from '../../app/services';
 import type { Contact } from '../../storage/contacts';
 import type { MessageStatus, StoredMessage } from '../../storage/delivery';
 import { MAX_PLAINTEXT_LENGTH } from '../../protocol/codec';
-import { Header, PrimaryButton } from '../components';
+import { Header, LinkBanner, PrimaryButton } from '../components';
 import { lastSeenLabel, timeLabel } from '../format';
-import { useEngineTick } from '../hooks';
+import { useEngineTick, useLink } from '../hooks';
 import { radius, useStyles, useTheme, type Colors } from '../theme';
 
 const STATUS: Record<MessageStatus, string> = {
@@ -43,6 +43,7 @@ export function ChatScreen({
   const { colors, scheme, ui } = useTheme();
   const styles = useStyles(makeStyles);
   const tick = useEngineTick(s, contactId);
+  const link = useLink(s);
   const [contact, setContact] = useState<Contact | null>(null);
   const [messages, setMessages] = useState<StoredMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -102,6 +103,8 @@ export function ChatScreen({
           />
           <Text style={ui.muted}>{lastSeenLabel(contact.lastSeenAt)}</Text>
         </Pressable>
+
+        <LinkBanner state={link.state} since={link.since} />
 
         {showSafety && (
           <View style={ui.card}>
