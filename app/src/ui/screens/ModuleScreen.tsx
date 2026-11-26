@@ -19,7 +19,7 @@ import {
 } from '../../radio/meshtastic/bleLink';
 import { Header, PrimaryButton } from '../components';
 import { useModuleState } from '../hooks';
-import { colors, ui } from '../theme';
+import { useStyles, useTheme, type Colors } from '../theme';
 
 type Busy = null | 'connecting' | 'provisioning' | 'restoring';
 
@@ -30,6 +30,8 @@ export function ModuleScreen({
   s: AppServices;
   back: () => void;
 }) {
+  const { colors, ui } = useTheme();
+  const styles = useStyles(makeStyles);
   const state = useModuleState(s);
   const [devices, setDevices] = useState<FoundDevice[]>([]);
   const [scanning, setScanning] = useState(false);
@@ -148,7 +150,7 @@ export function ModuleScreen({
 
       {busy && (
         <View style={[ui.card, ui.row]}>
-          <ActivityIndicator />
+          <ActivityIndicator color={colors.accent} />
           <Text style={ui.body}>
             {busy === 'connecting'
               ? 'Connexion au module…'
@@ -230,6 +232,8 @@ function ModuleSetup({
   status: ModuleStatus;
   onProvision: () => void;
 }) {
+  const { ui } = useTheme();
+  const styles = useStyles(makeStyles);
   if (status.firmware === 'too-old') {
     return (
       <View style={ui.card}>
@@ -274,11 +278,12 @@ function ModuleSetup({
   );
 }
 
-const styles = StyleSheet.create({
-  item: {
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  ok: { color: colors.success },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    item: {
+      paddingVertical: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
+    ok: { color: c.success },
+  });

@@ -5,7 +5,7 @@ import type { ScannedContact } from '../../contacts/service';
 import { CardError, MAX_NAME_BYTES } from '../../contacts/card';
 import { Header, PrimaryButton } from '../components';
 import { QrScanner } from '../QrScanner';
-import { ui } from '../theme';
+import { useStyles, useTheme, type Colors } from '../theme';
 
 const ERRORS: Record<string, string> = {
   'not a Wavepod contact link': 'Ce n’est pas un QR Wavepod.',
@@ -24,6 +24,8 @@ export function AddContactScreen({
   openChat: (contactId: string) => void;
   initialLink?: string;
 }) {
+  const { colors, scheme, ui } = useTheme();
+  const styles = useStyles(makeStyles);
   const [pasted, setPasted] = useState('');
   const [scanned, setScanned] = useState<ScannedContact | null>(null);
   const [name, setName] = useState('');
@@ -66,6 +68,8 @@ export function AddContactScreen({
         />
         <Text style={ui.muted}>Nom du contact</Text>
         <TextInput
+          placeholderTextColor={colors.placeholder}
+          keyboardAppearance={scheme}
           style={ui.input}
           value={name}
           onChangeText={setName}
@@ -112,6 +116,8 @@ export function AddContactScreen({
       {error && <Text style={ui.error}>{error}</Text>}
       <Text style={ui.muted}>Ou colle un lien wavepod://</Text>
       <TextInput
+        placeholderTextColor={colors.placeholder}
+        keyboardAppearance={scheme}
         style={ui.input}
         value={pasted}
         onChangeText={setPasted}
@@ -129,6 +135,7 @@ export function AddContactScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  content: { flexGrow: 1 },
-});
+const makeStyles = (_c: Colors) =>
+  StyleSheet.create({
+    content: { flexGrow: 1 },
+  });

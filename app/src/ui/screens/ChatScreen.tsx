@@ -17,7 +17,7 @@ import { MAX_PLAINTEXT_LENGTH } from '../../protocol/codec';
 import { Header, PrimaryButton } from '../components';
 import { lastSeenLabel, timeLabel } from '../format';
 import { useEngineTick } from '../hooks';
-import { colors, radius, ui } from '../theme';
+import { radius, useStyles, useTheme, type Colors } from '../theme';
 
 const STATUS: Record<MessageStatus, string> = {
   pending: 'en attente',
@@ -40,6 +40,8 @@ export function ChatScreen({
   contactId: string;
   back: () => void;
 }) {
+  const { colors, scheme, ui } = useTheme();
+  const styles = useStyles(makeStyles);
   const tick = useEngineTick(s, contactId);
   const [contact, setContact] = useState<Contact | null>(null);
   const [messages, setMessages] = useState<StoredMessage[]>([]);
@@ -156,6 +158,8 @@ export function ChatScreen({
 
         <View style={ui.row}>
           <TextInput
+            placeholderTextColor={colors.placeholder}
+            keyboardAppearance={scheme}
             style={[ui.input, styles.flex]}
             value={draft}
             onChangeText={t => bytes(t) <= MAX_PLAINTEXT_LENGTH && setDraft(t)}
@@ -178,17 +182,18 @@ export function ChatScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  bubble: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: radius.bubble,
-    marginVertical: 3,
-    maxWidth: '80%',
-  },
-  out: { alignSelf: 'flex-end', backgroundColor: colors.primary },
-  in: { alignSelf: 'flex-start', backgroundColor: colors.mist },
-  outText: { color: colors.white, fontSize: 15 },
-  meta: { fontSize: 11, marginTop: 4, opacity: 0.75 },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    flex: { flex: 1 },
+    bubble: {
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: radius.bubble,
+      marginVertical: 3,
+      maxWidth: '80%',
+    },
+    out: { alignSelf: 'flex-end', backgroundColor: c.primary },
+    in: { alignSelf: 'flex-start', backgroundColor: c.surface },
+    outText: { color: c.onPrimary, fontSize: 15 },
+    meta: { fontSize: 11, marginTop: 4, opacity: 0.75 },
+  });

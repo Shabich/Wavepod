@@ -19,7 +19,7 @@ import {
 } from '../storage/bootstrap';
 import { KeychainSecretStore, OpSqliteFactory } from '../storage/native';
 import { AppNavigator } from '../ui/AppNavigator';
-import { colors } from '../ui/theme';
+import { useStyles, useTheme, type Colors } from '../ui/theme';
 
 type State =
   | { kind: 'loading' }
@@ -30,6 +30,8 @@ const secrets = new KeychainSecretStore();
 const files = new OpSqliteFactory();
 
 export function AppRoot() {
+  const { colors } = useTheme();
+  const styles = useStyles(makeStyles);
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   const start = useCallback(async () => {
@@ -74,7 +76,7 @@ export function AppRoot() {
   if (state.kind === 'loading') {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.accent} />
       </View>
     );
   }
@@ -91,13 +93,14 @@ export function AppRoot() {
   return <AppNavigator identity={state.app.identity} db={state.app.db} />;
 }
 
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    padding: 24,
-  },
-  error: { color: colors.danger, textAlign: 'center' },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 16,
+      padding: 24,
+    },
+    error: { color: c.danger, textAlign: 'center' },
+  });

@@ -4,7 +4,7 @@ import type { AppServices } from '../../app/services';
 import { runSelfTest } from '../../diagnostics/cryptoSelfTest';
 import { runStorageSelfTest } from '../../storage/selfTest';
 import { Header } from '../components';
-import { colors, ui } from '../theme';
+import { useStyles, useTheme, type Colors } from '../theme';
 
 export function DiagnosticsScreen({
   s,
@@ -13,6 +13,8 @@ export function DiagnosticsScreen({
   s: AppServices;
   back: () => void;
 }) {
+  const { ui } = useTheme();
+  const styles = useStyles(makeStyles);
   const [crypto] = useState(runSelfTest);
   const [storage, setStorage] = useState('test en cours…');
   const [, bump] = useReducer((x: number) => x + 1, 0);
@@ -49,7 +51,8 @@ export function DiagnosticsScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  log: { flex: 1 },
-  line: { fontFamily: 'Menlo', fontSize: 11, color: colors.night },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    log: { flex: 1 },
+    line: { fontFamily: 'Menlo', fontSize: 11, color: c.text },
+  });

@@ -5,9 +5,9 @@ import type { Contact } from '../../storage/contacts';
 import { Avatar, Logo, PrimaryButton } from '../components';
 import { lastSeenLabel } from '../format';
 import { useEngineTick, useModuleState } from '../hooks';
-import { colors, ui } from '../theme';
 import type { Navigate } from '../navigation';
 import { MetaRepository } from '../../storage/meta';
+import { useStyles, useTheme, type Colors } from '../theme';
 
 const MODULE_LABEL = {
   disconnected: 'Aucun module connecté',
@@ -17,6 +17,8 @@ const MODULE_LABEL = {
 } as const;
 
 export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
+  const { ui } = useTheme();
+  const styles = useStyles(makeStyles);
   const tick = useEngineTick(s);
   const moduleState = useModuleState(s);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -175,6 +177,8 @@ function Step({
   label: string;
   onPress: () => void;
 }) {
+  const { ui } = useTheme();
+  const styles = useStyles(makeStyles);
   return (
     <Pressable accessibilityRole="button" onPress={onPress} disabled={done}>
       <Text style={[ui.body, done && styles.stepDone]}>
@@ -184,40 +188,41 @@ function Step({
   );
 }
 
-const styles = StyleSheet.create({
-  stepDone: { color: colors.slate, textDecorationLine: 'line-through' },
-  flex: { flex: 1 },
-  module: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.border,
-  },
-  dotOk: { backgroundColor: colors.success },
-  actions: { gap: 12 },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  wordmark: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.night,
-    letterSpacing: -0.5,
-  },
-  contact: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderRadius: 14,
-  },
-  contactPressed: { backgroundColor: colors.mist },
-  badge: {
-    backgroundColor: colors.mist,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  badgeText: { color: colors.primaryDark, fontSize: 12, fontWeight: '600' },
-  diag: { textAlign: 'center', color: colors.slate },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    stepDone: { color: c.textMuted, textDecorationLine: 'line-through' },
+    flex: { flex: 1 },
+    module: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    dot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: c.border,
+    },
+    dotOk: { backgroundColor: c.success },
+    actions: { gap: 12 },
+    brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    wordmark: {
+      fontSize: 28,
+      fontWeight: '800',
+      color: c.text,
+      letterSpacing: -0.5,
+    },
+    contact: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 4,
+      borderRadius: 14,
+    },
+    contactPressed: { backgroundColor: c.surface },
+    badge: {
+      backgroundColor: c.surface,
+      borderRadius: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+    },
+    badgeText: { color: c.accentStrong, fontSize: 12, fontWeight: '600' },
+    diag: { textAlign: 'center', color: c.textMuted },
+  });

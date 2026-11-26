@@ -11,9 +11,11 @@ import type { AppServices } from '../../app/services';
 import { MAX_NAME_BYTES } from '../../contacts/card';
 import { Header, PrimaryButton } from '../components';
 import { useModuleState } from '../hooks';
-import { colors, ui } from '../theme';
+import { useStyles, useTheme, type Colors } from '../theme';
 
 export function MyQrScreen({ s, back }: { s: AppServices; back: () => void }) {
+  const { colors, scheme, ui } = useTheme();
+  const styles = useStyles(makeStyles);
   const moduleState = useModuleState(s);
   const [name, setName] = useState('');
   const [card, setCard] = useState<{
@@ -51,6 +53,7 @@ export function MyQrScreen({ s, back }: { s: AppServices; back: () => void }) {
     size: number;
     ecl?: 'L' | 'M' | 'Q' | 'H';
     color?: string;
+    backgroundColor?: string;
   }>;
 
   return (
@@ -60,6 +63,8 @@ export function MyQrScreen({ s, back }: { s: AppServices; back: () => void }) {
         Ton pseudo, visible par la personne qui te scanne
       </Text>
       <TextInput
+        placeholderTextColor={colors.placeholder}
+        keyboardAppearance={scheme}
         style={ui.input}
         value={name}
         onChangeText={setName}
@@ -71,7 +76,13 @@ export function MyQrScreen({ s, back }: { s: AppServices; back: () => void }) {
       />
       <View style={styles.qr}>
         {card && (
-          <QRCode value={card.link} size={260} ecl="M" color={colors.night} />
+          <QRCode
+            value={card.link}
+            size={260}
+            ecl="M"
+            color={colors.qrForeground}
+            backgroundColor={colors.qrBackground}
+          />
         )}
       </View>
       {card && !card.includesModule && (
@@ -97,7 +108,15 @@ export function MyQrScreen({ s, back }: { s: AppServices; back: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  content: { flexGrow: 1 },
-  qr: { alignItems: 'center', paddingVertical: 12 },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    content: { flexGrow: 1 },
+    // White frame in both modes: cameras read dark modules on a light background.
+    qr: {
+      alignSelf: 'center',
+      padding: 14,
+      marginVertical: 8,
+      borderRadius: 16,
+      backgroundColor: c.qrBackground,
+    },
+  });

@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton } from './components';
-import { ui } from './theme';
+import { useStyles, useTheme, type Colors } from './theme';
 
 /** A failing camera (simulator, missing hardware) must never take the screen down. */
 class ScannerBoundary extends React.Component<
@@ -17,15 +17,18 @@ class ScannerBoundary extends React.Component<
     return { failed: true };
   }
   render() {
-    if (this.state.failed) {
-      return (
-        <Text style={ui.muted}>
-          La caméra n’est pas disponible. Colle le lien partagé par ton contact.
-        </Text>
-      );
-    }
+    if (this.state.failed) return <CameraUnavailable />;
     return this.props.children;
   }
+}
+
+function CameraUnavailable() {
+  const { ui } = useTheme();
+  return (
+    <Text style={ui.muted}>
+      La caméra n’est pas disponible. Colle le lien partagé par ton contact.
+    </Text>
+  );
 }
 
 export function QrScanner({ onCode }: { onCode: (value: string) => void }) {
@@ -37,6 +40,7 @@ export function QrScanner({ onCode }: { onCode: (value: string) => void }) {
 }
 
 function PlatformScanner({ onCode }: { onCode: (value: string) => void }) {
+  const { ui } = useTheme();
   if (Platform.OS !== 'ios') {
     return (
       <Text style={ui.muted}>
@@ -49,6 +53,8 @@ function PlatformScanner({ onCode }: { onCode: (value: string) => void }) {
 }
 
 function IosScanner({ onCode }: { onCode: (value: string) => void }) {
+  const { ui } = useTheme();
+  const styles = useStyles(makeStyles);
   // Lazy require: native Nitro modules are not loaded until the scanner is shown.
   const vc = useMemo(
     () =>
@@ -119,12 +125,13 @@ function IosScanner({ onCode }: { onCode: (value: string) => void }) {
   );
 }
 
-const styles = StyleSheet.create({
-  frame: {
-    height: 300,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: 'black',
-  },
-  placeholder: { gap: 12, paddingVertical: 24 },
-});
+const makeStyles = (_c: Colors) =>
+  StyleSheet.create({
+    frame: {
+      height: 300,
+      borderRadius: 16,
+      overflow: 'hidden',
+      backgroundColor: 'black',
+    },
+    placeholder: { gap: 12, paddingVertical: 24 },
+  });

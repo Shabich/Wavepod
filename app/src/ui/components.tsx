@@ -1,8 +1,11 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, ui } from './theme';
+import { radius, useStyles, useTheme, type Colors } from './theme';
 
-const LOGO = require('./assets/orque.png');
+const LOGO = {
+  light: require('./assets/orque.png'),
+  dark: require('./assets/orque-blanche.png'),
+};
 
 export function PrimaryButton({
   title,
@@ -15,6 +18,7 @@ export function PrimaryButton({
   disabled?: boolean;
   kind?: 'primary' | 'secondary';
 }) {
+  const styles = useStyles(makeStyles);
   return (
     <Pressable
       accessibilityRole="button"
@@ -44,6 +48,8 @@ export function Header({
   title: string;
   onBack?: () => void;
 }) {
+  const { ui } = useTheme();
+  const styles = useStyles(makeStyles);
   return (
     <View style={styles.header}>
       {onBack && (
@@ -60,9 +66,10 @@ export function Header({
 
 /** Orca logo, square, sized in points. */
 export function Logo({ size = 44 }: { size?: number }) {
+  const { scheme } = useTheme();
   return (
     <Image
-      source={LOGO}
+      source={LOGO[scheme]}
       style={{ width: size, height: size }}
       accessibilityLabel="Wavepod"
     />
@@ -71,6 +78,7 @@ export function Logo({ size = 44 }: { size?: number }) {
 
 /** Round initial for a contact. */
 export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
+  const styles = useStyles(makeStyles);
   const initial = Array.from(name.trim())[0]?.toUpperCase() ?? '?';
   return (
     <View
@@ -86,29 +94,30 @@ export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
   );
 }
 
-const styles = StyleSheet.create({
-  avatar: {
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { color: colors.white, fontWeight: '700' },
-  pressed: { backgroundColor: colors.primaryDark },
-  secondaryPressed: { backgroundColor: colors.mist },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.button,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    alignItems: 'center',
-  },
-  secondary: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  dimmed: { opacity: 0.45 },
-  label: { color: colors.white, fontSize: 16, fontWeight: '600' },
-  secondaryLabel: { color: colors.primary },
-  header: { gap: 4 },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    avatar: {
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: { color: c.onPrimary, fontWeight: '700' },
+    pressed: { backgroundColor: c.primaryPressed },
+    secondaryPressed: { backgroundColor: c.surface },
+    button: {
+      backgroundColor: c.primary,
+      borderRadius: radius.button,
+      paddingVertical: 14,
+      paddingHorizontal: 18,
+      alignItems: 'center',
+    },
+    secondary: {
+      backgroundColor: c.background,
+      borderWidth: 1,
+      borderColor: c.accent,
+    },
+    dimmed: { opacity: 0.45 },
+    label: { color: c.onPrimary, fontSize: 16, fontWeight: '600' },
+    secondaryLabel: { color: c.accent },
+    header: { gap: 4 },
+  });
