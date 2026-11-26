@@ -6,6 +6,7 @@ export type Route =
   | { name: 'addContact'; link?: string }
   | { name: 'chat'; contactId: string }
   | { name: 'diagnostics' }
-  | { name: 'settings' };
+  | { name: 'settings' }
+  | { name: 'profile' };
 
 export type Navigate = (route: Route) => void;

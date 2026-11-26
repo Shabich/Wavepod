@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { AppServices } from '../../app/services';
 import type { Contact } from '../../storage/contacts';
-import { Avatar, LinkBanner, Logo, PrimaryButton } from '../components';
+import { LinkBanner, Logo, PrimaryButton, ProfileAvatar } from '../components';
+import { ProfileService } from '../../profile/service';
+import type { Avatar } from '../../profile/avatar';
 import { lastSeenLabel } from '../format';
 import { useEngineTick, useLink, useModuleState } from '../hooks';
 import type { Navigate } from '../navigation';
@@ -22,6 +24,12 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
   const tick = useEngineTick(s);
   const moduleState = useModuleState(s);
   const link = useLink(s);
+  const [me, setMe] = useState<Avatar | null>(null);
+  useEffect(() => {
+    const load = () => s.profile.get().then(p => setMe(p.avatar));
+    load();
+    return s.profile.onChange(load);
+  }, [s]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [pending, setPending] = useState<Record<string, number>>({});
   const [steps, setSteps] = useState<{
@@ -71,9 +79,20 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
 
   return (
     <View style={ui.screen}>
-      <View style={styles.brand}>
-        <Logo size={44} />
-        <Text style={styles.wordmark}>Wavepod</Text>
+      <View style={styles.header}>
+        <View style={styles.brand}>
+          <Logo size={44} />
+          <Text style={styles.wordmark}>Wavepod</Text>
+        </View>
+        {me && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Mon profil"
+            onPress={() => go({ name: 'profile' })}
+          >
+            <ProfileAvatar avatar={me} size={40} />
+          </Pressable>
+        )}
       </View>
 
       <LinkBanner state={link.state} since={link.since} />
@@ -83,8 +102,8 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
           <Text style={ui.heading}>Pour commencer</Text>
           <Step
             done={steps.name}
-            label="Choisis ton pseudo"
-            onPress={() => go({ name: 'myQr' })}
+            label="Crée ton profil"
+            onPress={() => go({ name: 'profile' })}
           />
           <Step
             done={steps.module}
@@ -149,7 +168,7 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
               pressed && styles.contactPressed,
             ]}
           >
-            <Avatar name={item.name} />
+            <ProfileAvatar avatar={ProfileService.avatarOf(item)} />
             <View style={styles.flex}>
               <Text style={ui.body}>
                 {item.name}
@@ -219,6 +238,11 @@ const makeStyles = (c: Colors) =>
     },
     dotOk: { backgroundColor: c.success },
     actions: { gap: 12 },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
     brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     wordmark: {
       fontSize: 28,

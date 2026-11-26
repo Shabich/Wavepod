@@ -19,6 +19,7 @@ import { MessageNotifier, foregroundText } from './notifications';
 import { NotifeeNotifier } from './notifeeNotifier';
 import type { SqlDatabase } from '../storage/types';
 import { realScheduler } from '../delivery/engine';
+import { ProfileService } from '../profile/service';
 import { PresenceService, type PresenceSettings } from '../presence/service';
 
 export interface AppServices {
@@ -36,6 +37,7 @@ export interface AppServices {
   /** Diagnostic: asks for permission and shows a sample notification. */
   testNotification(): Promise<boolean>;
   presence: PresenceService;
+  profile: ProfileService;
   log: string[];
   onLog(l: () => void): () => void;
 }
@@ -102,6 +104,14 @@ export function createServices(
     log: addLog,
   });
   presence.start().catch(e => addLog(`presence start failed: ${String(e)}`));
+  const profile = new ProfileService({
+    myId: identity.contactId,
+    engine,
+    contacts: engine.contacts,
+    meta: new MetaRepository(db),
+    log: addLog,
+  });
+  profile.start().catch(e => addLog(`profile start failed: ${String(e)}`));
 
   const notifier = new NotifeeNotifier();
   const messageNotifier = new MessageNotifier({
@@ -151,6 +161,7 @@ export function createServices(
     disconnectModule: () => modules.disconnect(),
     setOpenChat: id => messageNotifier.setOpenChat(id),
     presence,
+    profile,
     async testNotification() {
       const ok = await notifier.requestPermission();
       if (ok) {

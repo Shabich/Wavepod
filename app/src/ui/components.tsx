@@ -2,6 +2,13 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { radius, useStyles, useTheme, type Colors } from './theme';
 import { durationLabel } from './format';
+import { avatarIcon } from './avatarIcons';
+import {
+  AVATAR_COLORS,
+  AVATAR_ICONS,
+  clampAvatar,
+  type Avatar,
+} from '../profile/avatar';
 
 const LOGO = {
   light: require('./assets/orque.png'),
@@ -77,32 +84,41 @@ export function Logo({ size = 44 }: { size?: number }) {
   );
 }
 
-/** Round initial for a contact. */
-export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
-  const styles = useStyles(makeStyles);
-  const initial = Array.from(name.trim())[0]?.toUpperCase() ?? '?';
+/** Profile avatar: the chosen icon, white, on the chosen color. */
+export function ProfileAvatar({
+  avatar,
+  size = 44,
+}: {
+  avatar: Avatar;
+  size?: number;
+}) {
+  const a = clampAvatar(avatar);
+  const Icon = avatarIcon(a.icon);
   return (
     <View
+      accessibilityRole="image"
+      accessibilityLabel={`Avatar ${AVATAR_ICONS[a.icon]}`}
       style={[
-        styles.avatar,
-        { width: size, height: size, borderRadius: size / 2 },
+        avatarBase.circle,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: AVATAR_COLORS[a.color],
+        },
       ]}
     >
-      <Text style={[styles.avatarText, { fontSize: size * 0.42 }]}>
-        {initial}
-      </Text>
+      <Icon color="#FFFFFF" size={size * 0.52} strokeWidth={2} />
     </View>
   );
 }
 
+const avatarBase = StyleSheet.create({
+  circle: { alignItems: 'center', justifyContent: 'center' },
+});
+
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
-    avatar: {
-      backgroundColor: c.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    avatarText: { color: c.onPrimary, fontWeight: '700' },
     pressed: { backgroundColor: c.primaryPressed },
     secondaryPressed: { backgroundColor: c.surface },
     button: {

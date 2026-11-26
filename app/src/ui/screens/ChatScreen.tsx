@@ -14,7 +14,13 @@ import type { AppServices } from '../../app/services';
 import type { Contact } from '../../storage/contacts';
 import type { MessageStatus, StoredMessage } from '../../storage/delivery';
 import { MAX_PLAINTEXT_LENGTH } from '../../protocol/codec';
-import { Header, LinkBanner, PrimaryButton } from '../components';
+import {
+  Header,
+  LinkBanner,
+  PrimaryButton,
+  ProfileAvatar,
+} from '../components';
+import { ProfileService } from '../../profile/service';
 import { lastSeenLabel, timeLabel } from '../format';
 import { useEngineTick, useLink } from '../hooks';
 import { radius, useStyles, useTheme, type Colors } from '../theme';
@@ -106,7 +112,20 @@ export function ChatScreen({
             title={`${contact.name}${contact.verified ? ' ✓' : ''}`}
             onBack={back}
           />
-          <Text style={ui.muted}>{lastSeenLabel(contact.lastSeenAt)}</Text>
+          <View style={styles.who}>
+            <ProfileAvatar
+              avatar={ProfileService.avatarOf(contact)}
+              size={40}
+            />
+            <View style={styles.flex}>
+              <Text style={ui.muted}>{lastSeenLabel(contact.lastSeenAt)}</Text>
+              {!!contact.bio && (
+                <Text style={ui.muted} numberOfLines={2}>
+                  {contact.bio}
+                </Text>
+              )}
+            </View>
+          </View>
         </Pressable>
 
         <LinkBanner state={link.state} since={link.since} />
@@ -192,6 +211,7 @@ export function ChatScreen({
 
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
+    who: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
     flex: { flex: 1 },
     bubble: {
       paddingHorizontal: 14,

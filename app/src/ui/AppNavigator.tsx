@@ -16,6 +16,7 @@ import { HomeScreen } from './screens/HomeScreen';
 import { ModuleScreen } from './screens/ModuleScreen';
 import { MyQrScreen } from './screens/MyQrScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
 
 export function AppNavigator({
   identity,
@@ -91,5 +92,7 @@ export function AppNavigator({
       return <DiagnosticsScreen s={s} back={back} />;
     case 'settings':
       return <SettingsScreen s={s} back={back} />;
+    case 'profile':
+      return <ProfileScreen s={s} back={back} />;
   }
 }

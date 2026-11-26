@@ -42,7 +42,11 @@ export function MyQrScreen({ s, back }: { s: AppServices; back: () => void }) {
   }, [refresh, moduleState]);
 
   const saveName = async () => {
-    await s.contacts.setDisplayName(name);
+    try {
+      await s.profile.set({ name });
+    } catch {
+      setError('Pseudo trop long.');
+    }
     refresh();
   };
 
