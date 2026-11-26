@@ -109,6 +109,12 @@ export function SettingsScreen({
                   : ' · module non connecté'
               }`}
         </Text>
+        <Text style={ui.muted}>
+          Balises de tes contacts reçues depuis l’ouverture : {p.beaconsHeard}
+          {p.lastBeaconHeardAt
+            ? ` (dernière il y a ${durationLabel(now - p.lastBeaconHeardAt)})`
+            : ''}
+        </Text>
       </View>
 
       <View style={ui.card}>

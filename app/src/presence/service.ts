@@ -52,6 +52,9 @@ export class PresenceService {
   private lastSignal = new Map<string, number>();
   private queue: Promise<unknown> = Promise.resolve();
   lastBeaconAt: number | null = null;
+  /** Contact beacons recognised since start (diagnostics). */
+  beaconsHeard = 0;
+  lastBeaconHeardAt: number | null = null;
   nextBeaconAt: number | null = null;
 
   constructor(private readonly d: PresenceDeps) {}
@@ -140,6 +143,8 @@ export class PresenceService {
     const known = (await this.d.contacts.list()).filter(c => c.beaconKey);
     const contact = matchBeacon(p.payload, known, now);
     if (!contact) return;
+    this.beaconsHeard++;
+    this.lastBeaconHeardAt = now;
     this.lastSignal.set(contact.id, now);
     await this.d.engine.signal(contact.id, p.from, now);
   }
