@@ -19,6 +19,7 @@
     "@noble/ciphers": "^2.4.0",
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
+    "@notifee/react-native": "9.1.8",
     "@op-engineering/op-sqlite": "^19.0.6",
     "@react-native/new-app-screen": "0.88.1",
     "react": "19.3.0",
