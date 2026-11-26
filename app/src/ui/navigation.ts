@@ -7,6 +7,8 @@ export type Route =
   | { name: 'chat'; contactId: string }
   | { name: 'diagnostics' }
   | { name: 'settings' }
-  | { name: 'profile' };
+  | { name: 'profile' }
+  | { name: 'newGroup' }
+  | { name: 'group'; groupId: string };
 
 export type Navigate = (route: Route) => void;

@@ -20,6 +20,8 @@ import { NotifeeNotifier } from './notifeeNotifier';
 import type { SqlDatabase } from '../storage/types';
 import { realScheduler } from '../delivery/engine';
 import { ProfileService } from '../profile/service';
+import { GroupService } from '../groups/service';
+import { GroupsRepository } from '../storage/groups';
 import { PresenceService, type PresenceSettings } from '../presence/service';
 
 export interface AppServices {
@@ -38,6 +40,8 @@ export interface AppServices {
   testNotification(): Promise<boolean>;
   presence: PresenceService;
   profile: ProfileService;
+  groups: GroupService;
+  groupsRepo: GroupsRepository;
   log: string[];
   onLog(l: () => void): () => void;
 }
@@ -123,6 +127,29 @@ export function createServices(
     log: addLog,
   });
   messageNotifier.start();
+
+  const groupsRepo = new GroupsRepository(db);
+  const groups = new GroupService({
+    me: identity,
+    radio: hub,
+    engine,
+    contacts: engine.contacts,
+    groups: groupsRepo,
+    myProfile: () => profile.get(),
+    scheduler: realScheduler,
+    log: addLog,
+  });
+  groups.start().catch(e => addLog(`groups start failed: ${String(e)}`));
+  groups.onIncoming(async m => {
+    const [g, sender] = await Promise.all([
+      groupsRepo.get(m.groupId),
+      engine.contacts.get(m.sender),
+    ]);
+    if (!g) return;
+    messageNotifier
+      .notifyGroup(g.id, g.name, sender?.name ?? 'Membre', m.text)
+      .catch(e => addLog(`group notification failed: ${String(e)}`));
+  });
   let permissionAsked = false;
 
   modules.onStateChange(st => {
@@ -162,6 +189,8 @@ export function createServices(
     setOpenChat: id => messageNotifier.setOpenChat(id),
     presence,
     profile,
+    groups,
+    groupsRepo,
     async testNotification() {
       const ok = await notifier.requestPermission();
       if (ok) {

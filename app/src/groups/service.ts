@@ -57,6 +57,9 @@ export class GroupService {
   private subscriptions: Unsubscribe[] = [];
   private queue: Promise<unknown> = Promise.resolve();
   private readonly listeners = new Set<() => void>();
+  private readonly incoming = new Set<
+    (m: { groupId: string; sender: string; text: string }) => void
+  >();
   /** Rosters received before their invite (DM order is not guaranteed). */
   private pendingRosters = new Map<string, RosterMember[][]>();
   private cancelTimer: (() => void) | null = null;
@@ -86,6 +89,14 @@ export class GroupService {
   onChange(l: () => void): Unsubscribe {
     this.listeners.add(l);
     return () => this.listeners.delete(l);
+  }
+
+  /** New message from another member (broadcast or DM copy), for notifications. */
+  onIncoming(
+    l: (m: { groupId: string; sender: string; text: string }) => void,
+  ): Unsubscribe {
+    this.incoming.add(l);
+    return () => this.incoming.delete(l);
   }
 
   idle() {
@@ -266,7 +277,12 @@ export class GroupService {
     if (await this.d.contacts.get(senderId)) {
       await this.d.engine.signal(senderId, from, now);
     }
-    if (fresh) this.changed();
+    if (fresh) {
+      this.changed();
+      this.incoming.forEach(l =>
+        l({ groupId: group.id, sender: senderId, text }),
+      );
+    }
   }
 
   private async onGroupAck(group: Group, plaintext: Uint8Array) {
@@ -321,7 +337,12 @@ export class GroupService {
         body: c.text,
         createdAt: this.d.scheduler.now(),
       });
-      if (fresh) this.changed();
+      if (fresh) {
+        this.changed();
+        this.incoming.forEach(l =>
+          l({ groupId: c.groupId, sender: c.senderId, text: c.text }),
+        );
+      }
     }
   }
 

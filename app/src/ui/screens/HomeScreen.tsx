@@ -4,6 +4,8 @@ import type { AppServices } from '../../app/services';
 import type { Contact } from '../../storage/contacts';
 import { LinkBanner, Logo, PrimaryButton, ProfileAvatar } from '../components';
 import { ProfileService } from '../../profile/service';
+import type { Group } from '../../storage/groups';
+import { Users } from 'lucide-react-native';
 import type { Avatar } from '../../profile/avatar';
 import { lastSeenLabel } from '../format';
 import { useEngineTick, useLink, useModuleState } from '../hooks';
@@ -19,11 +21,13 @@ const MODULE_LABEL = {
 } as const;
 
 export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
-  const { ui } = useTheme();
+  const { ui, colors } = useTheme();
   const styles = useStyles(makeStyles);
   const tick = useEngineTick(s);
   const moduleState = useModuleState(s);
   const link = useLink(s);
+  const [groupsTick, setGroupsTick] = useState(0);
+  useEffect(() => s.groups.onChange(() => setGroupsTick(t => t + 1)), [s]);
   const [me, setMe] = useState<Avatar | null>(null);
   useEffect(() => {
     const load = () => s.profile.get().then(p => setMe(p.avatar));
@@ -31,6 +35,7 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
     return s.profile.onChange(load);
   }, [s]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [pending, setPending] = useState<Record<string, number>>({});
   const [steps, setSteps] = useState<{
     name: boolean;
@@ -40,8 +45,9 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
 
   useEffect(() => {
     (async () => {
-      const list = await s.engine.contacts.list();
+      const list = await s.engine.contacts.listVisible();
       setContacts(list);
+      setGroups(await s.groupsRepo.list());
       const counts: Record<string, number> = {};
       for (const c of list) {
         const msgs = await s.engine.messages.listForContact(c.id, 50);
@@ -75,7 +81,7 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
         setSteps(done);
       }
     })();
-  }, [s, tick, moduleState]);
+  }, [s, tick, moduleState, groupsTick]);
 
   return (
     <View style={ui.screen}>
@@ -148,6 +154,37 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
           />
         </View>
       </View>
+
+      <View style={styles.sectionRow}>
+        <Text style={ui.heading}>Groupes</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => go({ name: 'newGroup' })}
+          hitSlop={10}
+        >
+          <Text style={styles.link}>+ Nouveau</Text>
+        </Pressable>
+      </View>
+      {groups.length === 0 ? (
+        <Text style={ui.muted}>Aucun groupe pour l’instant.</Text>
+      ) : (
+        groups.map(g => (
+          <Pressable
+            key={g.id}
+            accessibilityRole="button"
+            onPress={() => go({ name: 'group', groupId: g.id })}
+            style={({ pressed }) => [
+              styles.contact,
+              pressed && styles.contactPressed,
+            ]}
+          >
+            <View style={styles.groupIcon}>
+              <Users color={colors.onPrimary} size={22} />
+            </View>
+            <Text style={[ui.body, styles.flex]}>{g.name}</Text>
+          </Pressable>
+        ))
+      )}
 
       <Text style={ui.heading}>Contacts</Text>
       <FlatList
@@ -238,6 +275,20 @@ const makeStyles = (c: Colors) =>
     },
     dotOk: { backgroundColor: c.success },
     actions: { gap: 12 },
+    sectionRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    link: { color: c.accent, fontSize: 15, fontWeight: '600' },
+    groupIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     header: {
       flexDirection: 'row',
       alignItems: 'center',

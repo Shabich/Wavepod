@@ -50,6 +50,23 @@ export class MessageNotifier {
     this.stop?.();
   }
 
+  /** Group messages: same rules, keyed "group:<id>" for the open conversation. */
+  async notifyGroup(
+    groupId: string,
+    groupName: string,
+    senderName: string,
+    text: string,
+  ) {
+    const key = `group:${groupId}`;
+    if (!shouldNotify(this.d.appState(), this.openChat, key)) return;
+    const line = `${senderName} : ${text}`;
+    await this.d.notifier.showMessage(
+      key,
+      groupName,
+      line.length > MAX_BODY ? `${line.slice(0, MAX_BODY - 1)}…` : line,
+    );
+  }
+
   setOpenChat(contactId: string | null) {
     this.openChat = contactId;
   }

@@ -17,6 +17,8 @@ import { ModuleScreen } from './screens/ModuleScreen';
 import { MyQrScreen } from './screens/MyQrScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
+import { NewGroupScreen } from './screens/NewGroupScreen';
+import { GroupChatScreen } from './screens/GroupChatScreen';
 
 export function AppNavigator({
   identity,
@@ -51,7 +53,10 @@ export function AppNavigator({
 
   // Tap on a message notification: open that conversation.
   useEffect(() => {
-    const open = (contactId: string) => go({ name: 'chat', contactId });
+    const open = (key: string) =>
+      key.startsWith('group:')
+        ? go({ name: 'group', groupId: key.slice(6) })
+        : go({ name: 'chat', contactId: key });
     initialNotificationContact()
       .then(id => id && open(id))
       .catch(() => undefined);
@@ -94,5 +99,15 @@ export function AppNavigator({
       return <SettingsScreen s={s} back={back} />;
     case 'profile':
       return <ProfileScreen s={s} back={back} />;
+    case 'newGroup':
+      return (
+        <NewGroupScreen
+          s={s}
+          back={back}
+          openGroup={id => replace({ name: 'group', groupId: id })}
+        />
+      );
+    case 'group':
+      return <GroupChatScreen s={s} groupId={route.groupId} back={back} />;
   }
 }
