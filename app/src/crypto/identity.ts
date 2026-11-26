@@ -15,6 +15,8 @@ export interface WavepodIdentity {
   sign: { secretKey: Uint8Array; publicKey: Uint8Array };
   /** Address derived from the X25519 public key. */
   contactId: string;
+  /** Secret shared with contacts (Hello message) to recognise our presence beacons. */
+  beaconKey: Uint8Array;
 }
 
 const enc = new TextEncoder();
@@ -47,6 +49,7 @@ export function identityFromMasterSeed(seed: Uint8Array): WavepodIdentity {
       publicKey: ed25519.getPublicKey(signSecret),
     },
     contactId: contactId(boxPublic),
+    beaconKey: hkdf(sha256, seed, undefined, enc.encode('wavepod/v1/beacon'), 16),
   };
 }
 

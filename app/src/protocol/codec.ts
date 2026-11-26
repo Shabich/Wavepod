@@ -30,6 +30,10 @@ export const MAX_PLAINTEXT_LENGTH = MAX_ENVELOPE_LENGTH - OVERHEAD;
 export enum MessageType {
   Text = 1,
   Ack = 2,
+  /** Encrypted, reliable: carries the sender's beacon key (sent once per contact). */
+  Hello = 3,
+  /** Broadcast presence beacon (own 9-byte format, see presence/beacon.ts). */
+  Beacon = 4,
 }
 
 export interface EnvelopeHeader {
