@@ -34,3 +34,8 @@ Logo dans l'app : orque indigo en mode clair, orque blanche en mode sombre.
   - `sans-fond` (orque blanche) sert de logo en mode sombre (`orque-blanche*.png`), sur l'écran de lancement iOS et dans l'icône adaptative Android.
 
 Les fichiers dérivés sont générés à partir de ces sources (redimensionnement, recadrage sur le contenu). À refaire si le logo change.
+
+## Avatars de profil
+
+Icônes de [Lucide](https://lucide.dev) (licence ISC), en blanc sur 8 couleurs : indigo `#4F64AA`, sarcelle `#0E7490`, vert `#15803D`, orange `#C2410C`, rouge `#B91C1C`, violet `#7E22CE`, rose `#BE185D` et ardoise `#5A6178`. Le contraste de l'icône blanche est d'au moins 4,5:1 sur chacune (`__tests__/profile.test.ts`). Les listes sont dans `app/src/profile/avatar.ts`. On ne fait qu'y ajouter des entrées, jamais les réordonner : seuls les numéros voyagent par radio.
+
