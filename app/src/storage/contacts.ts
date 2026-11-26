@@ -26,6 +26,8 @@ export interface Contact {
   remoteName: string | null;
   /** Version of our own profile already queued for this contact. */
   profileSentVersion: number | null;
+  /** Known only as a group member (not added by QR): not listed as a contact. */
+  hidden: boolean;
   createdAt: number;
 }
 
@@ -85,6 +87,53 @@ export class ContactsRepository {
       [hint],
     );
     return rows.map(toContact);
+  }
+
+  /** Contacts shown in the app (excludes group-only members). */
+  async listVisible(): Promise<Contact[]> {
+    return (await this.list()).filter(c => !c.hidden);
+  }
+
+  /**
+   * Group member learnt from a roster: created hidden if unknown, never hides an
+   * existing contact. Updates its routing hint and remote name/avatar if hidden.
+   */
+  async upsertMember(m: {
+    publicKey: Uint8Array;
+    name: string;
+    nodeNum: number;
+    avatar: { icon: number; color: number };
+  }): Promise<Contact> {
+    const id = contactId(m.publicKey);
+    const existing = await this.get(id);
+    if (!existing) {
+      await this.db.execute(
+        `INSERT INTO contacts (id, public_key, key_hint, name, node_num, created_at,
+           hidden, remote_name, avatar_icon, avatar_color)
+         VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
+        [
+          id,
+          m.publicKey,
+          keyHint(m.publicKey),
+          m.name,
+          m.nodeNum || null,
+          this.now(),
+          m.name,
+          m.avatar.icon,
+          m.avatar.color,
+        ],
+      );
+    } else if (existing.nodeNum === null && m.nodeNum) {
+      await this.db.execute('UPDATE contacts SET node_num = ? WHERE id = ?', [
+        m.nodeNum,
+        id,
+      ]);
+    }
+    return (await this.get(id))!;
+  }
+
+  async unhide(id: string) {
+    await this.db.execute('UPDATE contacts SET hidden = 0 WHERE id = ?', [id]);
   }
 
   async list(): Promise<Contact[]> {
@@ -219,6 +268,7 @@ function toContact(r: SqlRow): Contact {
       r.remote_name === null || r.remote_name === undefined
         ? null
         : String(r.remote_name),
+    hidden: Number(r.hidden ?? 0) === 1,
     profileSentVersion:
       r.profile_sent_version === null || r.profile_sent_version === undefined
         ? null

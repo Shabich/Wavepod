@@ -54,6 +54,10 @@ describe('migrations', () => {
     expect(rows.map(r => r.name)).toEqual([
       'contacts',
       'dedup',
+      'group_members',
+      'group_messages',
+      'group_receipts',
+      'groups',
       'messages',
       'meta',
       'outbox',

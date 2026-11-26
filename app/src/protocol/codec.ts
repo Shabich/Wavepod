@@ -36,6 +36,16 @@ export enum MessageType {
   Beacon = 4,
   /** Encrypted, reliable: avatar, name and bio (see profile/avatar.ts). */
   Profile = 5,
+  /** DM: group id, key and name (groups/codec.ts). */
+  GroupInvite = 6,
+  /** DM: up to 3 group members (key, node, avatar, name). */
+  GroupRoster = 7,
+  /** Broadcast, group key: sender id + text. */
+  GroupMessage = 8,
+  /** Unicast to the sender's node, group key: acker id + message ids. */
+  GroupAck = 9,
+  /** DM fallback for a member who did not ack a group message. */
+  GroupCopy = 10,
 }
 
 export interface EnvelopeHeader {

@@ -64,6 +64,16 @@ export type EngineEvent =
   | { kind: 'hello'; contactId: string; beaconKey: Uint8Array }
   /** A contact sent its profile (raw body, decoded by the profile service). */
   | { kind: 'profile'; contactId: string; body: Uint8Array }
+  /** Group control message from a contact (invite, roster, DM copy). */
+  | {
+      kind: 'control';
+      contactId: string;
+      type: MessageType;
+      body: Uint8Array;
+      messageId: number;
+    }
+  /** A control message we sent (no chat row) was acknowledged by the app. */
+  | { kind: 'controlDelivered'; contactId: string; messageId: number }
   | { kind: 'log'; line: string };
 
 export interface EngineDeps {
@@ -445,6 +455,10 @@ export class DeliveryEngine {
 
   private async handlePacket(packet: RadioPacket) {
     if (isBeacon(packet.payload)) return; // handled by the presence service
+    const type = packet.payload[0] & 0x0f;
+    if (type === MessageType.GroupMessage || type === MessageType.GroupAck) {
+      return; // group key, handled by the group service
+    }
     let hint: number;
     try {
       hint = decodeHeader(packet.payload).keyHint;
@@ -491,6 +505,19 @@ export class DeliveryEngine {
       } else {
         this.log(`duplicate ${hex(opened.messageId)} from ${contact.name}`);
       }
+    } else if (
+      opened.type === MessageType.GroupInvite ||
+      opened.type === MessageType.GroupRoster ||
+      opened.type === MessageType.GroupCopy
+    ) {
+      await this.sendAppAck(contact, [opened.messageId], packet.from);
+      this.emit({
+        kind: 'control',
+        contactId: contact.id,
+        type: opened.type,
+        body: opened.plaintext,
+        messageId: opened.messageId,
+      });
     } else if (opened.type === MessageType.Profile) {
       await this.sendAppAck(contact, [opened.messageId], packet.from);
       this.emit({
@@ -509,7 +536,16 @@ export class DeliveryEngine {
       }
     } else if (opened.type === MessageType.Ack) {
       for (const id of decodeAckBody(opened.plaintext)) {
+        const queued = await this.outbox.get(contact.id, id);
         await this.outbox.remove(contact.id, id);
+        const isChat = await this.messages.get(contact.id, 'out', id);
+        if (queued && !isChat) {
+          this.emit({
+            kind: 'controlDelivered',
+            contactId: contact.id,
+            messageId: id,
+          });
+        }
         if (await this.messages.advance(contact.id, id, 'delivered', now)) {
           this.log(`delivered ${hex(id)}`);
           this.emit({

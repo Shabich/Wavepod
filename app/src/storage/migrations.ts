@@ -78,6 +78,42 @@ export const MIGRATIONS: string[][] = [
     `ALTER TABLE contacts ADD COLUMN remote_name TEXT`,
     `ALTER TABLE contacts ADD COLUMN profile_sent_version INTEGER`,
   ],
+  // 6: groups (task 10)
+  [
+    `ALTER TABLE contacts ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0`,
+    `CREATE TABLE groups (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      key BLOB NOT NULL,
+      hint INTEGER NOT NULL,
+      created_by TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE INDEX groups_hint ON groups(hint)`,
+    `CREATE TABLE group_members (
+      group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      member_id TEXT NOT NULL,
+      PRIMARY KEY (group_id, member_id)
+    )`,
+    `CREATE TABLE group_messages (
+      group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      message_id INTEGER NOT NULL,
+      sender TEXT NOT NULL,
+      body TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (group_id, message_id)
+    )`,
+    `CREATE INDEX group_messages_by_group ON group_messages(group_id, created_at)`,
+    `CREATE TABLE group_receipts (
+      group_id TEXT NOT NULL,
+      message_id INTEGER NOT NULL,
+      member_id TEXT NOT NULL,
+      acked_at INTEGER,
+      copy_id INTEGER,
+      PRIMARY KEY (group_id, message_id, member_id)
+    )`,
+    `CREATE INDEX group_receipts_copy ON group_receipts(member_id, copy_id)`,
+  ],
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

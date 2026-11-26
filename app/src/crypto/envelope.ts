@@ -79,16 +79,28 @@ export function seal(
   sessionKey: Uint8Array,
   messageId: number = randomMessageId(),
 ): Uint8Array {
+  return sealWithHint(
+    type,
+    plaintext,
+    keyHint(senderPublicKey),
+    sessionKey,
+    messageId,
+  );
+}
+
+/** Same envelope, with an explicit 2-byte hint (group messages use the group's). */
+export function sealWithHint(
+  type: MessageType,
+  plaintext: Uint8Array,
+  hint: number,
+  key: Uint8Array,
+  messageId: number = randomMessageId(),
+): Uint8Array {
   if (plaintext.length > MAX_PLAINTEXT_LENGTH)
     throw new EnvelopeError('plaintext too long');
-  const header = encodeHeader(
-    type,
-    keyHint(senderPublicKey),
-    messageId,
-    randomBytes(8),
-  );
+  const header = encodeHeader(type, hint, messageId, randomBytes(8));
   const nonce = header.slice(3, 15);
-  const sealed = chacha20poly1305(sessionKey, nonce, header).encrypt(plaintext);
+  const sealed = chacha20poly1305(key, nonce, header).encrypt(plaintext);
   return concat(header, sealed);
 }
 
