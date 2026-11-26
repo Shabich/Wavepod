@@ -19,6 +19,7 @@ import {
 } from '../storage/bootstrap';
 import { KeychainSecretStore, OpSqliteFactory } from '../storage/native';
 import { AppNavigator } from '../ui/AppNavigator';
+import { colors } from '../ui/theme';
 
 type State =
   | { kind: 'loading' }
@@ -98,5 +99,5 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 24,
   },
-  error: { color: '#b00020', textAlign: 'center' },
+  error: { color: colors.danger, textAlign: 'center' },
 });

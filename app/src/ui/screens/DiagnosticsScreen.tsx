@@ -4,7 +4,7 @@ import type { AppServices } from '../../app/services';
 import { runSelfTest } from '../../diagnostics/cryptoSelfTest';
 import { runStorageSelfTest } from '../../storage/selfTest';
 import { Header } from '../components';
-import { ui } from '../theme';
+import { colors, ui } from '../theme';
 
 export function DiagnosticsScreen({
   s,
@@ -51,5 +51,5 @@ export function DiagnosticsScreen({
 
 const styles = StyleSheet.create({
   log: { flex: 1 },
-  line: { fontFamily: 'Menlo', fontSize: 11, color: '#344054' },
+  line: { fontFamily: 'Menlo', fontSize: 11, color: colors.night },
 });

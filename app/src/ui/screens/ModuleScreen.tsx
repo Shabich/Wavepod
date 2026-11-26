@@ -19,7 +19,7 @@ import {
 } from '../../radio/meshtastic/bleLink';
 import { Header, PrimaryButton } from '../components';
 import { useModuleState } from '../hooks';
-import { OK, ui } from '../theme';
+import { colors, ui } from '../theme';
 
 type Busy = null | 'connecting' | 'provisioning' | 'restoring';
 
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   item: {
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: '#d0d5dd',
+    borderColor: colors.border,
   },
-  ok: { color: OK },
+  ok: { color: colors.success },
 });

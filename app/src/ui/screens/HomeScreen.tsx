@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { AppServices } from '../../app/services';
 import type { Contact } from '../../storage/contacts';
-import { PrimaryButton } from '../components';
+import { Avatar, Logo, PrimaryButton } from '../components';
 import { lastSeenLabel } from '../format';
 import { useEngineTick, useModuleState } from '../hooks';
-import { MUTED, OCEAN, OK, ui } from '../theme';
+import { colors, ui } from '../theme';
 import type { Navigate } from '../navigation';
 import { MetaRepository } from '../../storage/meta';
 
@@ -68,7 +68,10 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
 
   return (
     <View style={ui.screen}>
-      <Text style={ui.title}>Wavepod</Text>
+      <View style={styles.brand}>
+        <Logo size={44} />
+        <Text style={styles.wordmark}>Wavepod</Text>
+      </View>
 
       {steps && (
         <View style={ui.card}>
@@ -132,8 +135,12 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
           <Pressable
             accessibilityRole="button"
             onPress={() => go({ name: 'chat', contactId: item.id })}
-            style={styles.contact}
+            style={({ pressed }) => [
+              styles.contact,
+              pressed && styles.contactPressed,
+            ]}
           >
+            <Avatar name={item.name} />
             <View style={styles.flex}>
               <Text style={ui.body}>
                 {item.name}
@@ -142,7 +149,11 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
               <Text style={ui.muted}>{lastSeenLabel(item.lastSeenAt)}</Text>
             </View>
             {pending[item.id] > 0 && (
-              <Text style={styles.pending}>{pending[item.id]} en attente</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {pending[item.id]} en attente
+                </Text>
+              </View>
             )}
           </Pressable>
         )}
@@ -174,19 +185,39 @@ function Step({
 }
 
 const styles = StyleSheet.create({
-  stepDone: { color: MUTED, textDecorationLine: 'line-through' },
+  stepDone: { color: colors.slate, textDecorationLine: 'line-through' },
   flex: { flex: 1 },
   module: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#d0d5dd' },
-  dotOk: { backgroundColor: OK },
+  dot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.border,
+  },
+  dotOk: { backgroundColor: colors.success },
   actions: { gap: 12 },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  wordmark: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.night,
+    letterSpacing: -0.5,
+  },
   contact: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: '#d0d5dd',
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 14,
   },
-  pending: { color: OCEAN, fontSize: 13 },
-  diag: { textAlign: 'center', color: MUTED },
+  contactPressed: { backgroundColor: colors.mist },
+  badge: {
+    backgroundColor: colors.mist,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeText: { color: colors.primaryDark, fontSize: 12, fontWeight: '600' },
+  diag: { textAlign: 'center', color: colors.slate },
 });

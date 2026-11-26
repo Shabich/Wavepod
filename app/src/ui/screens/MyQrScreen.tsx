@@ -11,7 +11,7 @@ import type { AppServices } from '../../app/services';
 import { MAX_NAME_BYTES } from '../../contacts/card';
 import { Header, PrimaryButton } from '../components';
 import { useModuleState } from '../hooks';
-import { ui } from '../theme';
+import { colors, ui } from '../theme';
 
 export function MyQrScreen({ s, back }: { s: AppServices; back: () => void }) {
   const moduleState = useModuleState(s);
@@ -50,6 +50,7 @@ export function MyQrScreen({ s, back }: { s: AppServices; back: () => void }) {
     value: string;
     size: number;
     ecl?: 'L' | 'M' | 'Q' | 'H';
+    color?: string;
   }>;
 
   return (
@@ -69,7 +70,9 @@ export function MyQrScreen({ s, back }: { s: AppServices; back: () => void }) {
         returnKeyType="done"
       />
       <View style={styles.qr}>
-        {card && <QRCode value={card.link} size={260} ecl="M" />}
+        {card && (
+          <QRCode value={card.link} size={260} ecl="M" color={colors.night} />
+        )}
       </View>
       {card && !card.includesModule && (
         <Text style={ui.error}>

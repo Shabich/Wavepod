@@ -17,7 +17,7 @@ import { MAX_PLAINTEXT_LENGTH } from '../../protocol/codec';
 import { Header, PrimaryButton } from '../components';
 import { lastSeenLabel, timeLabel } from '../format';
 import { useEngineTick } from '../hooks';
-import { OCEAN, OCEAN_LIGHT, ui } from '../theme';
+import { colors, radius, ui } from '../theme';
 
 const STATUS: Record<MessageStatus, string> = {
   pending: 'en attente',
@@ -180,9 +180,15 @@ export function ChatScreen({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  bubble: { padding: 10, borderRadius: 14, marginVertical: 3, maxWidth: '80%' },
-  out: { alignSelf: 'flex-end', backgroundColor: OCEAN },
-  in: { alignSelf: 'flex-start', backgroundColor: OCEAN_LIGHT },
-  outText: { color: 'white', fontSize: 15 },
+  bubble: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: radius.bubble,
+    marginVertical: 3,
+    maxWidth: '80%',
+  },
+  out: { alignSelf: 'flex-end', backgroundColor: colors.primary },
+  in: { alignSelf: 'flex-start', backgroundColor: colors.mist },
+  outText: { color: colors.white, fontSize: 15 },
   meta: { fontSize: 11, marginTop: 4, opacity: 0.75 },
 });
