@@ -5,7 +5,7 @@ Instructions pour travailler sur Wavepod. Le document de référence est `WAVEPO
 ## État du projet
 
 - Plan et choix technologiques validés le 2026-11-24 : React Native (TypeScript), `react-native-ble-plx`, `op-sqlite` avec SQLCipher, protobuf généré depuis les `.proto` Meshtastic. Pour le chiffrement, `@noble/*` remplace libsodium (voir `PLAN.md`).
-- Application dans `app/`. Commandes : `npm test`, `npm run typecheck`, `npm run lint`, `npm run proto` (régénère le code protobuf depuis `app/proto/`).
+- Application dans `app/`. `npm run ios` lance un build Debug, qui a besoin de Metro (`npm start`) : sans Metro, l'app affiche un écran blanc. `npm run ios:release` installe un build autonome, à utiliser hors développement et sur le terrain. Commandes : `npm test`, `npm run typecheck`, `npm run lint`, `npm run proto` (régénère le code protobuf depuis `app/proto/`).
 - Les `.proto` Meshtastic sont copiés dans `app/proto/` (version dans `app/proto/VERSION`). Ne pas modifier le code généré dans `src/radio/meshtastic/proto/`.
 - `src/polyfills` doit rester le premier import de `index.js` (aléa crypto, `TextDecoder` absent de Hermes).
 - Tâches détaillées dans `tasks/`, suivi de l'avancement dans `tasks/README.md`.

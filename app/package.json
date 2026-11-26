@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tools/sim",
     "sim:start": "tools/sim/start-nodes.sh",
     "sim:stop": "tools/sim/stop-nodes.sh",
-    "sim:test": "tsx tools/sim/two-node-test.ts"
+    "sim:test": "tsx tools/sim/two-node-test.ts",
+    "ios:release": "react-native run-ios --mode Release"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.17.0",
