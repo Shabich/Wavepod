@@ -49,7 +49,13 @@ export function identityFromMasterSeed(seed: Uint8Array): WavepodIdentity {
       publicKey: ed25519.getPublicKey(signSecret),
     },
     contactId: contactId(boxPublic),
-    beaconKey: hkdf(sha256, seed, undefined, enc.encode('wavepod/v1/beacon'), 16),
+    beaconKey: hkdf(
+      sha256,
+      seed,
+      undefined,
+      enc.encode('wavepod/v1/beacon'),
+      16,
+    ),
   };
 }
 
