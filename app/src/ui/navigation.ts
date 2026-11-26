@@ -5,6 +5,7 @@ export type Route =
   | { name: 'myQr' }
   | { name: 'addContact'; link?: string }
   | { name: 'chat'; contactId: string }
-  | { name: 'diagnostics' };
+  | { name: 'diagnostics' }
+  | { name: 'settings' };
 
 export type Navigate = (route: Route) => void;

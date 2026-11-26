@@ -18,6 +18,8 @@ import { ModuleManager } from './moduleManager';
 import { MessageNotifier, foregroundText } from './notifications';
 import { NotifeeNotifier } from './notifeeNotifier';
 import type { SqlDatabase } from '../storage/types';
+import { realScheduler } from '../delivery/engine';
+import { PresenceService, type PresenceSettings } from '../presence/service';
 
 export interface AppServices {
   identity: WavepodIdentity;
@@ -33,6 +35,7 @@ export interface AppServices {
   setOpenChat(contactId: string | null): void;
   /** Diagnostic: asks for permission and shows a sample notification. */
   testNotification(): Promise<boolean>;
+  presence: PresenceService;
   log: string[];
   onLog(l: () => void): () => void;
 }
@@ -42,7 +45,16 @@ export function createServices(
   db: SqlDatabase,
 ): AppServices {
   const hub = new RadioHub();
-  const engine = new DeliveryEngine({ radio: hub, me: identity.box, db });
+  const presenceSettings: PresenceSettings = {
+    discreet: false,
+    intervalMin: 20,
+  };
+  const engine = new DeliveryEngine({
+    radio: hub,
+    me: identity.box,
+    db,
+    allowProbe: () => !presenceSettings.discreet,
+  });
   const log: string[] = [];
   const logListeners = new Set<() => void>();
   const addLog = (line: string) => {
@@ -79,6 +91,17 @@ export function createServices(
     }
   });
   engine.start();
+  const presence = new PresenceService({
+    me: identity,
+    radio: hub,
+    engine,
+    contacts: engine.contacts,
+    meta: new MetaRepository(db),
+    settings: presenceSettings,
+    scheduler: realScheduler,
+    log: addLog,
+  });
+  presence.start().catch(e => addLog(`presence start failed: ${String(e)}`));
 
   const notifier = new NotifeeNotifier();
   const messageNotifier = new MessageNotifier({
@@ -127,6 +150,7 @@ export function createServices(
     connectModule: (deviceId, name) => modules.connect(deviceId, name),
     disconnectModule: () => modules.disconnect(),
     setOpenChat: id => messageNotifier.setOpenChat(id),
+    presence,
     async testNotification() {
       const ok = await notifier.requestPermission();
       if (ok) {

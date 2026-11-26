@@ -168,9 +168,20 @@ export function HomeScreen({ s, go }: { s: AppServices; go: Navigate }) {
         )}
       />
 
-      <Pressable onPress={() => go({ name: 'diagnostics' })}>
-        <Text style={[ui.muted, styles.diag]}>Diagnostic</Text>
-      </Pressable>
+      <View style={styles.footer}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => go({ name: 'settings' })}
+        >
+          <Text style={[ui.muted, styles.diag]}>Réglages</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => go({ name: 'diagnostics' })}
+        >
+          <Text style={[ui.muted, styles.diag]}>Diagnostic</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -231,5 +242,6 @@ const makeStyles = (c: Colors) =>
       paddingVertical: 3,
     },
     badgeText: { color: c.accentStrong, fontSize: 12, fontWeight: '600' },
+    footer: { flexDirection: 'row', justifyContent: 'center', gap: 24 },
     diag: { textAlign: 'center', color: c.textMuted },
   });
