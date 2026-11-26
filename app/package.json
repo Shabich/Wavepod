@@ -23,6 +23,7 @@
     "@notifee/react-native": "9.1.8",
     "@op-engineering/op-sqlite": "^19.0.6",
     "@react-native/new-app-screen": "0.88.1",
+    "lucide-react-native": "1.72.0",
     "react": "19.3.0",
     "react-native": "0.88.1",
     "react-native-ble-plx": "^3.5.1",
