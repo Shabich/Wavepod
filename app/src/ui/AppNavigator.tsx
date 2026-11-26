@@ -4,6 +4,10 @@ import { createServices } from '../app/services';
 import type { WavepodIdentity } from '../crypto/identity';
 import type { SqlDatabase } from '../storage/types';
 import { CARD_URL_PREFIX } from '../contacts/card';
+import {
+  initialNotificationContact,
+  onNotificationPressed,
+} from '../app/notifeeNotifier';
 import type { Route } from './navigation';
 import { AddContactScreen } from './screens/AddContactScreen';
 import { ChatScreen } from './screens/ChatScreen';
@@ -41,6 +45,15 @@ export function AppNavigator({
     Linking.getInitialURL().then(open);
     const sub = Linking.addEventListener('url', e => open(e.url));
     return () => sub.remove();
+  }, [go]);
+
+  // Tap on a message notification: open that conversation.
+  useEffect(() => {
+    const open = (contactId: string) => go({ name: 'chat', contactId });
+    initialNotificationContact()
+      .then(id => id && open(id))
+      .catch(() => undefined);
+    return onNotificationPressed(open);
   }, [go]);
 
   useEffect(() => {

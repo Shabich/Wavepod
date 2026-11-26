@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { AppServices } from '../../app/services';
 import { runSelfTest } from '../../diagnostics/cryptoSelfTest';
 import { runStorageSelfTest } from '../../storage/selfTest';
-import { Header } from '../components';
+import { Header, PrimaryButton } from '../components';
 import { useStyles, useTheme, type Colors } from '../theme';
 
 export function DiagnosticsScreen({
@@ -17,6 +17,7 @@ export function DiagnosticsScreen({
   const styles = useStyles(makeStyles);
   const [crypto] = useState(runSelfTest);
   const [storage, setStorage] = useState('test en cours…');
+  const [notif, setNotif] = useState<string | null>(null);
   const [, bump] = useReducer((x: number) => x + 1, 0);
 
   useEffect(() => {
@@ -39,6 +40,15 @@ export function DiagnosticsScreen({
             }`
           : ''}
       </Text>
+      <PrimaryButton
+        title="Notification de test"
+        kind="secondary"
+        onPress={async () => {
+          const ok = await s.testNotification().catch(() => false);
+          setNotif(ok ? 'notification envoyée' : 'notifications refusées');
+        }}
+      />
+      {notif && <Text style={ui.muted}>{notif}</Text>}
       <Text style={ui.heading}>Journal</Text>
       <ScrollView style={styles.log}>
         {s.log.map((l, i) => (

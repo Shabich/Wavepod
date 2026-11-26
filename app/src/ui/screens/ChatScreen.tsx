@@ -44,6 +44,11 @@ export function ChatScreen({
   const styles = useStyles(makeStyles);
   const tick = useEngineTick(s, contactId);
   const link = useLink(s);
+
+  useEffect(() => {
+    s.setOpenChat(contactId);
+    return () => s.setOpenChat(null);
+  }, [s, contactId]);
   const [contact, setContact] = useState<Contact | null>(null);
   const [messages, setMessages] = useState<StoredMessage[]>([]);
   const [draft, setDraft] = useState('');

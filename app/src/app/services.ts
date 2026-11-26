@@ -13,7 +13,10 @@ import {
   initBle,
 } from '../radio/meshtastic/bleLink';
 import { MetaRepository } from '../storage/meta';
+import { AppState } from 'react-native';
 import { ModuleManager } from './moduleManager';
+import { MessageNotifier, foregroundText } from './notifications';
+import { NotifeeNotifier } from './notifeeNotifier';
 import type { SqlDatabase } from '../storage/types';
 
 export interface AppServices {
@@ -26,6 +29,10 @@ export interface AppServices {
   connectModule(deviceId: string, name: string): Promise<void>;
   disconnectModule(): Promise<void>;
   moduleName(): string | null;
+  /** The conversation on screen gets no notification while the app is active. */
+  setOpenChat(contactId: string | null): void;
+  /** Diagnostic: asks for permission and shows a sample notification. */
+  testNotification(): Promise<boolean>;
   log: string[];
   onLog(l: () => void): () => void;
 }
@@ -72,7 +79,33 @@ export function createServices(
     }
   });
   engine.start();
-  modules.onStateChange(st => addLog(`link ${st}`));
+
+  const notifier = new NotifeeNotifier();
+  const messageNotifier = new MessageNotifier({
+    engine,
+    contacts: engine.contacts,
+    messages: engine.messages,
+    notifier,
+    appState: () => AppState.currentState ?? 'active',
+    log: addLog,
+  });
+  messageNotifier.start();
+  let permissionAsked = false;
+
+  modules.onStateChange(st => {
+    addLog(`link ${st}`);
+    notifier
+      .setForeground(foregroundText(st, modules.moduleName))
+      .catch(e => addLog(`foreground service: ${String(e)}`));
+    // Ask for notifications when they start to make sense: a module is connected.
+    if (st === 'connected' && !permissionAsked) {
+      permissionAsked = true;
+      notifier
+        .requestPermission()
+        .then(ok => addLog(`notifications ${ok ? 'allowed' : 'denied'}`))
+        .catch(e => addLog(`notification permission: ${String(e)}`));
+    }
+  });
   modules
     .resumeLast()
     .then(found => found && addLog('reconnecting to the last module'))
@@ -93,5 +126,17 @@ export function createServices(
     moduleName: () => modules.moduleName,
     connectModule: (deviceId, name) => modules.connect(deviceId, name),
     disconnectModule: () => modules.disconnect(),
+    setOpenChat: id => messageNotifier.setOpenChat(id),
+    async testNotification() {
+      const ok = await notifier.requestPermission();
+      if (ok) {
+        await notifier.showMessage(
+          'test',
+          'Wavepod',
+          'Notification de test : tu seras prévenu des nouveaux messages.',
+        );
+      }
+      return ok;
+    },
   };
 }
