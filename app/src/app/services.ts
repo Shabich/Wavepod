@@ -7,7 +7,11 @@ import { ContactService } from '../contacts/service';
 import { DeliveryEngine, type EngineEvent } from '../delivery/engine';
 import type { WavepodIdentity } from '../crypto/identity';
 import { RadioHub } from '../radio/RadioHub';
-import { connectToModule } from '../radio/meshtastic/bleLink';
+import {
+  cancelModuleConnection,
+  connectToModule,
+  initBle,
+} from '../radio/meshtastic/bleLink';
 import { MetaRepository } from '../storage/meta';
 import { ModuleManager } from './moduleManager';
 import type { SqlDatabase } from '../storage/types';
@@ -50,8 +54,10 @@ export function createServices(
     () => (hub.adapter?.connectionState === 'ready' ? hub.adapter : null),
     addLog,
   );
+  initBle(addLog);
   const modules = new ModuleManager({
     connectLink: connectToModule,
+    cancelConnect: cancelModuleConnection,
     hub,
     meta: new MetaRepository(db),
     log: addLog,
@@ -66,6 +72,11 @@ export function createServices(
     }
   });
   engine.start();
+  modules.onStateChange(st => addLog(`link ${st}`));
+  modules
+    .resumeLast()
+    .then(found => found && addLog('reconnecting to the last module'))
+    .catch(e => addLog(`resume failed: ${String(e)}`));
 
   return {
     identity,

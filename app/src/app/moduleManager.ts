@@ -38,6 +38,8 @@ export type LinkState = 'idle' | 'connecting' | 'connected' | 'reconnecting';
 
 export interface ModuleManagerOptions {
   connectLink: (deviceId: string) => Promise<BleLink>;
+  /** Cancels a pending connection request (BLE requests may wait for the module). */
+  cancelConnect?: (deviceId: string) => Promise<void>;
   hub: RadioHub;
   meta: MetaRepository;
   log?: (line: string) => void;
@@ -68,7 +70,10 @@ export class ModuleManager {
   private provisioning = false;
   private unwatch: Unsubscribe | null = null;
   private readonly listeners = new Set<(s: LinkState) => void>();
-  private readonly o: Required<Omit<ModuleManagerOptions, 'log' | 'now'>> & {
+  private readonly o: Required<
+    Omit<ModuleManagerOptions, 'log' | 'now' | 'cancelConnect'>
+  > & {
+    cancelConnect?: (deviceId: string) => Promise<void>;
     log: (line: string) => void;
     now: () => number;
   };
@@ -106,6 +111,9 @@ export class ModuleManager {
 
   /** Connects to a module chosen by the user and remembers it. */
   async connect(deviceId: string, name: string): Promise<void> {
+    if (this.deviceId && this.deviceId !== deviceId) {
+      await this.o.cancelConnect?.(this.deviceId);
+    }
     await this.release();
     const gen = ++this.generation;
     this.deviceId = deviceId;
@@ -124,6 +132,7 @@ export class ModuleManager {
   /** User disconnection: stop supervising and forget the module. */
   async disconnect(): Promise<void> {
     this.generation++;
+    if (this.deviceId) await this.o.cancelConnect?.(this.deviceId);
     await this.release();
     this.deviceId = null;
     this.name = null;

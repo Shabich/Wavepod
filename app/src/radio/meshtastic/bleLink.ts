@@ -1,6 +1,8 @@
 /**
  * BleLink implementation on react-native-ble-plx.
- * The BleManager is created lazily so importing this module has no native side effect.
+ * The BleManager is created lazily so importing this module has no native side effect;
+ * call initBle() at app start so iOS can restore the BLE state after relaunching
+ * the app in the background.
  */
 import { PermissionsAndroid, Platform } from 'react-native';
 import type {
@@ -20,13 +22,30 @@ import { base64ToBytes, bytesToBase64 } from './base64';
 
 let manager: BleManagerType | undefined;
 
-function getManager(): BleManagerType {
+/** CoreBluetooth state restoration key (iOS 'bluetooth-central' background mode). */
+const RESTORE_ID = 'wavepod-ble';
+
+function getManager(log?: (line: string) => void): BleManagerType {
   if (!manager) {
     const { BleManager } =
       require('react-native-ble-plx') as typeof import('react-native-ble-plx');
-    manager = new BleManager();
+    manager = new BleManager({
+      restoreStateIdentifier: RESTORE_ID,
+      // iOS relaunched the app in the background with BLE state: the module manager
+      // then reconnects to the remembered module, which resolves at once since the
+      // peripheral is already connected at system level.
+      restoreStateFunction: restored => {
+        const n = restored?.connectedPeripherals?.length ?? 0;
+        log?.(`BLE state restored (${n} connected peripheral(s))`);
+      },
+    });
   }
   return manager;
+}
+
+/** Creates the BLE manager early (must run at app start for iOS restoration). */
+export function initBle(log?: (line: string) => void) {
+  getManager(log);
 }
 
 export interface FoundDevice {
@@ -72,12 +91,26 @@ export function scanForModules(
   return () => m.stopDeviceScan();
 }
 
+/**
+ * Connects to a known module. No timeout: on iOS a pending connection request is
+ * handled by the system and completes when the module comes back in range; on
+ * Android autoConnect does the same. Cancel with cancelModuleConnection().
+ */
 export async function connectToModule(deviceId: string): Promise<BleLink> {
   const m = getManager();
   m.stopDeviceScan();
-  let device: Device = await m.connectToDevice(deviceId, { requestMTU: 512 });
+  let device: Device = await m.connectToDevice(deviceId, {
+    requestMTU: 512,
+    autoConnect: Platform.OS === 'android',
+  });
   device = await device.discoverAllServicesAndCharacteristics();
   return new PlxBleLink(device);
+}
+
+export async function cancelModuleConnection(deviceId: string): Promise<void> {
+  await getManager()
+    .cancelDeviceConnection(deviceId)
+    .catch(() => undefined);
 }
 
 class PlxBleLink implements BleLink {
