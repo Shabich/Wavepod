@@ -44,6 +44,8 @@ Instructions pour travailler sur Wavepod. Le document de référence est `WAVEPO
 
 ## Règles de travail
 
+- Couleurs de l'interface : uniquement les jetons de `app/src/ui/theme.ts` (charte dans `brand/README.md`), jamais de code couleur écrit en dur dans un écran.
+
 - Avant d'ajouter un type de paquet, chiffrer sa taille et sa fréquence, et mettre à jour le budget d'antenne.
 - Toute modification du format binaire des messages incrémente le champ version et garde une compatibilité de lecture.
 - Aucune dépendance cryptographique maison : bibliothèques auditées uniquement (libsodium ou équivalent).
