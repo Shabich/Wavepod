@@ -103,6 +103,7 @@ export class ContactService {
       nodeNum: scanned.nodeNum ?? undefined,
       meshContact: card.meshContact ?? undefined,
     });
+    await this.contacts.setRemoteNameIfMissing(contact.id, card.name);
     if (card.meshContact)
       await this.injectIntoModule(contact.name, card.meshContact);
     if (scanned.nodeNum !== null) {

@@ -62,6 +62,8 @@ export type EngineEvent =
   | { kind: 'contact'; contactId: string }
   /** A contact sent us its beacon key (Hello). */
   | { kind: 'hello'; contactId: string; beaconKey: Uint8Array }
+  /** A contact sent its profile (raw body, decoded by the profile service). */
+  | { kind: 'profile'; contactId: string; body: Uint8Array }
   | { kind: 'log'; line: string };
 
 export interface EngineDeps {
@@ -145,6 +147,18 @@ export class DeliveryEngine {
    * conversation). Lets the contact recognise our presence beacons.
    */
   sendHello(contactId: string, beaconKey: Uint8Array): Promise<number> {
+    return this.sendControl(contactId, MessageType.Hello, beaconKey);
+  }
+
+  /**
+   * Control message (Hello, Profile…): reliable and acknowledged like a text,
+   * but not stored as a chat message.
+   */
+  sendControl(
+    contactId: string,
+    type: MessageType,
+    body: Uint8Array,
+  ): Promise<number> {
     return this.enqueue(async () => {
       const contact = await this.requireContact(contactId);
       const now = this.clock.now();
@@ -153,8 +167,8 @@ export class DeliveryEngine {
         contactId,
         messageId,
         envelope: seal(
-          MessageType.Hello,
-          beaconKey,
+          type,
+          body,
           this.me.publicKey,
           this.sessionKey(contact),
           messageId,
@@ -477,6 +491,13 @@ export class DeliveryEngine {
       } else {
         this.log(`duplicate ${hex(opened.messageId)} from ${contact.name}`);
       }
+    } else if (opened.type === MessageType.Profile) {
+      await this.sendAppAck(contact, [opened.messageId], packet.from);
+      this.emit({
+        kind: 'profile',
+        contactId: contact.id,
+        body: opened.plaintext,
+      });
     } else if (opened.type === MessageType.Hello) {
       await this.sendAppAck(contact, [opened.messageId], packet.from);
       if (opened.plaintext.length === BEACON_KEY_LENGTH) {

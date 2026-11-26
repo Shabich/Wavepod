@@ -70,6 +70,14 @@ export const MIGRATIONS: string[][] = [
     `ALTER TABLE contacts ADD COLUMN beacon_key BLOB`,
     `ALTER TABLE contacts ADD COLUMN hello_sent_at INTEGER`,
   ],
+  // 5: profiles (task 09)
+  [
+    `ALTER TABLE contacts ADD COLUMN avatar_icon INTEGER`,
+    `ALTER TABLE contacts ADD COLUMN avatar_color INTEGER`,
+    `ALTER TABLE contacts ADD COLUMN bio TEXT`,
+    `ALTER TABLE contacts ADD COLUMN remote_name TEXT`,
+    `ALTER TABLE contacts ADD COLUMN profile_sent_version INTEGER`,
+  ],
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

@@ -34,6 +34,8 @@ export enum MessageType {
   Hello = 3,
   /** Broadcast presence beacon (own 9-byte format, see presence/beacon.ts). */
   Beacon = 4,
+  /** Encrypted, reliable: avatar, name and bio (see profile/avatar.ts). */
+  Profile = 5,
 }
 
 export interface EnvelopeHeader {

@@ -19,6 +19,13 @@ export interface Contact {
   beaconKey: Uint8Array | null;
   /** When we queued our own Hello for this contact (null = not yet). */
   helloSentAt: number | null;
+  /** From the contact's Profile message; null until received. */
+  avatar: { icon: number; color: number } | null;
+  bio: string | null;
+  /** Name the contact gave itself (from its card or profile). */
+  remoteName: string | null;
+  /** Version of our own profile already queued for this contact. */
+  profileSentVersion: number | null;
   createdAt: number;
 }
 
@@ -116,6 +123,53 @@ export class ContactsRepository {
     );
   }
 
+  /**
+   * Applies a received profile. The displayed name follows the contact's own name
+   * unless it was renamed locally (name differs from the last name it gave itself).
+   */
+  async applyProfile(
+    id: string,
+    p: { name: string; bio: string; avatar: { icon: number; color: number } },
+  ) {
+    const c = await this.get(id);
+    if (!c) return;
+    const followsRemote = c.remoteName === null || c.name === c.remoteName;
+    await this.db.execute(
+      `UPDATE contacts SET avatar_icon = ?, avatar_color = ?, bio = ?, remote_name = ?,
+         name = ? WHERE id = ?`,
+      [
+        p.avatar.icon,
+        p.avatar.color,
+        p.bio || null,
+        p.name,
+        followsRemote ? p.name : c.name,
+        id,
+      ],
+    );
+  }
+
+  /** Records the name the contact gave itself (card), if not known yet. */
+  async setRemoteNameIfMissing(id: string, name: string) {
+    await this.db.execute(
+      'UPDATE contacts SET remote_name = ? WHERE id = ? AND remote_name IS NULL',
+      [name, id],
+    );
+  }
+
+  async rename(id: string, name: string) {
+    await this.db.execute('UPDATE contacts SET name = ? WHERE id = ?', [
+      name.trim(),
+      id,
+    ]);
+  }
+
+  async markProfileSent(id: string, version: number) {
+    await this.db.execute(
+      'UPDATE contacts SET profile_sent_version = ? WHERE id = ?',
+      [version, id],
+    );
+  }
+
   async findByNodeNum(nodeNum: number): Promise<Contact[]> {
     const { rows } = await this.db.execute(
       'SELECT * FROM contacts WHERE node_num = ?',
@@ -156,6 +210,19 @@ function toContact(r: SqlRow): Contact {
       r.hello_sent_at === null || r.hello_sent_at === undefined
         ? null
         : Number(r.hello_sent_at),
+    avatar:
+      r.avatar_icon === null || r.avatar_icon === undefined
+        ? null
+        : { icon: Number(r.avatar_icon), color: Number(r.avatar_color ?? 0) },
+    bio: r.bio === null || r.bio === undefined ? null : String(r.bio),
+    remoteName:
+      r.remote_name === null || r.remote_name === undefined
+        ? null
+        : String(r.remote_name),
+    profileSentVersion:
+      r.profile_sent_version === null || r.profile_sent_version === undefined
+        ? null
+        : Number(r.profile_sent_version),
     createdAt: Number(r.created_at),
   };
 }
