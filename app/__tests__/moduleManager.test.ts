@@ -44,12 +44,16 @@ class FakeFirmware {
   /** Other config sections as stored by the firmware (replayed on sync). */
   extra = new Map<string, Uint8Array>();
   rebooting = false;
+  /** Module switched off or out of range. */
+  off = false;
+  connections = 0;
   reboots = 0;
   commits = 0;
   private pending: (() => void)[] = [];
 
   connect = async (): Promise<BleLink> => {
-    if (this.rebooting) throw new Error('module not found');
+    if (this.rebooting || this.off) throw new Error('module not found');
+    this.connections++;
     const queue: Uint8Array[] = [];
     const notify = new Set<() => void>();
     const closed = new Set<() => void>();
@@ -165,6 +169,15 @@ class FakeFirmware {
 
   private onReboot: () => void = () => undefined;
 
+  powerOff() {
+    this.off = true;
+    this.onReboot();
+  }
+
+  powerOn() {
+    this.off = false;
+  }
+
   private reboot() {
     this.reboots++;
     setTimeout(() => {
@@ -189,8 +202,9 @@ async function setup() {
     reconnectTimeoutMs: 2_000,
     retryDelayMs: 20,
     syncTimeoutMs: 1_000,
+    backoffMs: [20, 40],
   });
-  return { fw, hub, meta, m };
+  return { fw, hub, meta, m, db };
 }
 
 describe('ModuleManager', () => {
@@ -243,4 +257,79 @@ describe('ModuleManager', () => {
     expect(fw.commits).toBe(1);
     expect(fw.reboots).toBe(1);
   });
+
+  it('reconnects by itself after the module was lost', async () => {
+    const { fw, hub, m } = await setup();
+    const states: string[] = [];
+    m.onStateChange(st => states.push(st));
+    await m.connect('dev-1', 'T1000-E');
+    fw.powerOff();
+    await waitUntil(() => m.state === 'reconnecting');
+    expect(m.disconnectedSince).not.toBeNull();
+    expect(hub.connectionState).toBe('disconnected');
+    await sleep(150); // a few failed attempts while off
+    fw.powerOn();
+    await waitUntil(() => m.state === 'connected');
+    expect(hub.connectionState).toBe('ready');
+    expect(m.disconnectedSince).toBeNull();
+    expect(states).toEqual([
+      'connecting',
+      'connected',
+      'reconnecting',
+      'connected',
+    ]);
+  });
+
+  it('stops reconnecting when the user disconnects', async () => {
+    const { fw, m } = await setup();
+    await m.connect('dev-1', 'T1000-E');
+    fw.powerOff();
+    await waitUntil(() => m.state === 'reconnecting');
+    await m.disconnect();
+    const before = fw.connections;
+    fw.powerOn();
+    await sleep(200);
+    expect(m.state).toBe('idle');
+    expect(fw.connections).toBe(before);
+  });
+
+  it('resumes the remembered module at app start, unless the user disconnected', async () => {
+    const { fw, hub, meta, m } = await setup();
+    await m.connect('dev-1', 'T1000-E');
+    const m2 = new ModuleManager({
+      connectLink: fw.connect,
+      hub,
+      meta,
+      backoffMs: [20],
+      syncTimeoutMs: 1_000,
+    });
+    expect(await m2.resumeLast()).toBe(true);
+    await waitUntil(() => m2.state === 'connected');
+    expect(m2.moduleName).toBe('T1000-E');
+
+    await m2.disconnect();
+    const m3 = new ModuleManager({ connectLink: fw.connect, hub, meta });
+    expect(await m3.resumeLast()).toBe(false);
+  });
+
+  it('does not treat the provisioning reboot as a loss', async () => {
+    const { fw, m } = await setup();
+    const states: string[] = [];
+    m.onStateChange(st => states.push(st));
+    await m.connect('dev-1', 'T1000-E');
+    await m.provision();
+    await sleep(100);
+    expect(m.state).toBe('connected');
+    expect(states).toEqual(['connecting', 'connected']);
+    expect(fw.connections).toBe(2);
+  });
 });
+
+const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+async function waitUntil(cond: () => boolean, ms = 2_000) {
+  const end = Date.now() + ms;
+  while (!cond()) {
+    if (Date.now() > end) throw new Error('timeout');
+    await sleep(10);
+  }
+}
