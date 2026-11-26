@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
+  Platform,
   FlatList,
   Pressable,
   ScrollView,
@@ -177,6 +179,8 @@ export function ModuleScreen({
 
       {error && <Text style={ui.error}>{error}</Text>}
 
+      {connected && !busy && <BackgroundTips />}
+
       {connected && !busy ? (
         <>
           {status?.hasBackup && (
@@ -222,6 +226,42 @@ export function ModuleScreen({
         )
       )}
     </ScrollView>
+  );
+}
+
+/** Keeping the BLE link alive with the screen off depends on the platform. */
+function BackgroundTips() {
+  const { ui } = useTheme();
+  if (Platform.OS === 'android') {
+    return (
+      <View style={ui.card}>
+        <Text style={ui.heading}>Écran éteint</Text>
+        <Text style={ui.muted}>
+          Pour recevoir tes messages quand le téléphone dort, autorise Wavepod à
+          fonctionner sans restriction de batterie. Certains téléphones arrêtent
+          sinon l’application au bout de quelques minutes.
+        </Text>
+        <PrimaryButton
+          title="Réglages de batterie"
+          kind="secondary"
+          onPress={() =>
+            Linking.sendIntent(
+              'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
+            ).catch(() => Linking.openSettings())
+          }
+        />
+      </View>
+    );
+  }
+  return (
+    <View style={ui.card}>
+      <Text style={ui.heading}>Écran éteint</Text>
+      <Text style={ui.muted}>
+        Wavepod reste connecté à ton module en arrière-plan. Ne le ferme pas en
+        le balayant depuis le sélecteur d’apps : iOS couperait la connexion
+        jusqu’à sa prochaine ouverture.
+      </Text>
+    </View>
   );
 }
 
