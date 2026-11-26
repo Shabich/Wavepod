@@ -12,6 +12,8 @@ import type {
   Unsubscribe,
 } from './RadioInterface';
 import type { MeshtasticAdapter } from './meshtastic/MeshtasticAdapter';
+import { AirtimeMeter } from './airtime';
+import { BROADCAST_ADDR } from './meshtastic/constants';
 
 type L<T> = (v: T) => void;
 
@@ -21,6 +23,9 @@ export class RadioHub implements RadioInterface {
   private readonly rx = new Set<L<RadioPacket>>();
   private readonly ax = new Set<L<RadioAck>>();
   private readonly sx = new Set<L<ConnectionState>>();
+  private readonly hx = new Set<(nodeNum: number, at: number) => void>();
+  /** Our own transmissions over the last hour (duty-cycle reserve). */
+  readonly airtime = new AirtimeMeter();
   private lastState: ConnectionState = 'disconnected';
 
   get adapter() {
@@ -42,6 +47,7 @@ export class RadioHub implements RadioInterface {
       adapter.onReceive(p => this.rx.forEach(l => l(p))),
       adapter.onAck(a => this.ax.forEach(l => l(a))),
       adapter.onConnectionState(() => this.emitState()),
+      adapter.onHeard((n, at) => this.hx.forEach(l => l(n, at))),
     ];
     this.emitState();
   }
@@ -53,9 +59,16 @@ export class RadioHub implements RadioInterface {
     this.emitState();
   }
 
-  send(payload: Uint8Array, destination: number, options?: SendOptions) {
-    if (!this.current) return Promise.reject(new Error('no module connected'));
-    return this.current.send(payload, destination, options);
+  async send(payload: Uint8Array, destination: number, options?: SendOptions) {
+    if (!this.current) throw new Error('no module connected');
+    const id = await this.current.send(payload, destination, options);
+    this.airtime.record(payload.length, destination !== BROADCAST_ADDR);
+    return id;
+  }
+
+  onHeard(l: (nodeNum: number, at: number) => void) {
+    this.hx.add(l);
+    return () => this.hx.delete(l);
   }
 
   onReceive(l: L<RadioPacket>) {

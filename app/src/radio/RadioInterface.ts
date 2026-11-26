@@ -51,4 +51,9 @@ export interface RadioInterface {
   onReceive(listener: (packet: RadioPacket) => void): Unsubscribe;
   onAck(listener: (ack: RadioAck) => void): Unsubscribe;
   onConnectionState(listener: (state: ConnectionState) => void): Unsubscribe;
+  /**
+   * Optional: any radio activity from a node (any packet, or last_heard reported
+   * by the module). A presence hint, not authenticated.
+   */
+  onHeard?(listener: (nodeNum: number, at: number) => void): Unsubscribe;
 }

@@ -15,6 +15,10 @@ export interface Contact {
   lastProbeAt: number | null;
   /** Meshtastic SharedContact of the contact's module, re-injected into our module. */
   meshContact: Uint8Array | null;
+  /** The contact's beacon key (from its Hello), to recognise its beacons. */
+  beaconKey: Uint8Array | null;
+  /** When we queued our own Hello for this contact (null = not yet). */
+  helloSentAt: number | null;
   createdAt: number;
 }
 
@@ -98,6 +102,28 @@ export class ContactsRepository {
     );
   }
 
+  async setBeaconKey(id: string, key: Uint8Array) {
+    await this.db.execute('UPDATE contacts SET beacon_key = ? WHERE id = ?', [
+      key,
+      id,
+    ]);
+  }
+
+  async markHelloSent(id: string, at: number) {
+    await this.db.execute(
+      'UPDATE contacts SET hello_sent_at = ? WHERE id = ?',
+      [at, id],
+    );
+  }
+
+  async findByNodeNum(nodeNum: number): Promise<Contact[]> {
+    const { rows } = await this.db.execute(
+      'SELECT * FROM contacts WHERE node_num = ?',
+      [nodeNum],
+    );
+    return rows.map(toContact);
+  }
+
   async setVerified(id: string, verified: boolean) {
     await this.db.execute('UPDATE contacts SET verified = ? WHERE id = ?', [
       verified ? 1 : 0,
@@ -125,6 +151,11 @@ function toContact(r: SqlRow): Contact {
         ? null
         : Number(r.last_probe_at),
     meshContact: (r.mesh_contact as Uint8Array | null | undefined) ?? null,
+    beaconKey: (r.beacon_key as Uint8Array | null | undefined) ?? null,
+    helloSentAt:
+      r.hello_sent_at === null || r.hello_sent_at === undefined
+        ? null
+        : Number(r.hello_sent_at),
     createdAt: Number(r.created_at),
   };
 }

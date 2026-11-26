@@ -79,6 +79,7 @@ export class MeshtasticAdapter implements RadioInterface {
   private states = new Emitter<ConnectionState>();
   private nodeChanges = new Emitter<NodeSummary>();
   private rawEvents = new Emitter<RadioEvent>();
+  private heard = new Emitter<{ nodeNum: number; at: number }>();
 
   constructor(private readonly link: BleLink) {}
 
@@ -196,6 +197,10 @@ export class MeshtasticAdapter implements RadioInterface {
   onNode(l: Listener<NodeSummary>) {
     return this.nodeChanges.on(l);
   }
+  onHeard(l: (nodeNum: number, at: number) => void) {
+    return this.heard.on(h => l(h.nodeNum, h.at));
+  }
+
   /** Every decoded event, for the prototype log. */
   onRawEvent(l: Listener<RadioEvent>) {
     return this.rawEvents.on(l);
@@ -230,6 +235,7 @@ export class MeshtasticAdapter implements RadioInterface {
       event = { kind: 'ignored', reason: `decode error: ${String(e)}` };
     }
     this.rawEvents.emit(event);
+    this.reportHeard(event);
     switch (event.kind) {
       case 'myInfo':
         this.myNodeNum = event.myNodeNum;
@@ -287,6 +293,25 @@ export class MeshtasticAdapter implements RadioInterface {
         break;
       default:
         break;
+    }
+  }
+
+  private reportHeard(event: RadioEvent) {
+    if (event.kind === 'nodeInfo') {
+      const { num, lastHeard } = event.node;
+      if (num !== this.myNodeNum && lastHeard > 0) {
+        this.heard.emit({ nodeNum: num, at: lastHeard * 1000 });
+      }
+      return;
+    }
+    const from =
+      event.kind === 'wavepodPacket' || event.kind === 'routing'
+        ? event.from
+        : event.kind === 'ignored'
+        ? event.from
+        : undefined;
+    if (from && from !== this.myNodeNum) {
+      this.heard.emit({ nodeNum: from, at: Date.now() });
     }
   }
 

@@ -65,6 +65,11 @@ export const MIGRATIONS: string[][] = [
   ],
   // 3: QR contacts (task 04)
   [`ALTER TABLE contacts ADD COLUMN mesh_contact BLOB`],
+  // 4: presence (task 06)
+  [
+    `ALTER TABLE contacts ADD COLUMN beacon_key BLOB`,
+    `ALTER TABLE contacts ADD COLUMN hello_sent_at INTEGER`,
+  ],
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

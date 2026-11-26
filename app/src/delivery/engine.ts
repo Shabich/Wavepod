@@ -34,6 +34,7 @@ import {
 } from '../storage/delivery';
 import type { SqlDatabase } from '../storage/types';
 import { DEFAULT_POLICY, burstSize, type DeliveryPolicy } from './policy';
+import { BEACON_KEY_LENGTH, isBeacon } from '../presence/beacon';
 import { decide, type OutboxEntry } from './schedule';
 
 export interface Scheduler {
@@ -59,6 +60,8 @@ export type EngineEvent =
       messageId: number;
     }
   | { kind: 'contact'; contactId: string }
+  /** A contact sent us its beacon key (Hello). */
+  | { kind: 'hello'; contactId: string; beaconKey: Uint8Array }
   | { kind: 'log'; line: string };
 
 export interface EngineDeps {
@@ -67,6 +70,8 @@ export interface EngineDeps {
   db: SqlDatabase;
   scheduler?: Scheduler;
   policy?: DeliveryPolicy;
+  /** False in discreet mode: no spontaneous probe for unreachable contacts. */
+  allowProbe?: () => boolean;
 }
 
 export class DeliveryEngine {
@@ -85,6 +90,7 @@ export class DeliveryEngine {
   private cancelTimer: (() => void) | null = null;
   private timerAt: number | null = null;
   private nextSendAt = 0;
+  private readonly allowProbe: () => boolean;
   private started = false;
 
   constructor(deps: EngineDeps) {
@@ -92,6 +98,7 @@ export class DeliveryEngine {
     this.me = deps.me;
     this.clock = deps.scheduler ?? realScheduler;
     this.policy = deps.policy ?? DEFAULT_POLICY;
+    this.allowProbe = deps.allowProbe ?? (() => true);
     this.contacts = new ContactsRepository(deps.db, () => this.clock.now());
     this.messages = new MessagesRepository(deps.db);
     this.outbox = new OutboxRepository(deps.db);
@@ -131,6 +138,38 @@ export class DeliveryEngine {
   /** Waits until every queued operation has run (tests, shutdown). */
   idle(): Promise<void> {
     return this.queue.then(() => undefined);
+  }
+
+  /**
+   * Sends our beacon key to a contact (reliable, acknowledged, not shown in the
+   * conversation). Lets the contact recognise our presence beacons.
+   */
+  sendHello(contactId: string, beaconKey: Uint8Array): Promise<number> {
+    return this.enqueue(async () => {
+      const contact = await this.requireContact(contactId);
+      const now = this.clock.now();
+      const messageId = randomMessageId();
+      await this.outbox.add({
+        contactId,
+        messageId,
+        envelope: seal(
+          MessageType.Hello,
+          beaconKey,
+          this.me.publicKey,
+          this.sessionKey(contact),
+          messageId,
+        ),
+        createdAt: now,
+        expiresAt: now + this.policy.ttlMs,
+        attempts: 0,
+        burstAttempts: 0,
+        lastAttemptAt: null,
+        packetId: null,
+        forced: false,
+      });
+      await this.tick();
+      return messageId;
+    });
   }
 
   sendText(contactId: string, text: string): Promise<number> {
@@ -268,7 +307,10 @@ export class DeliveryEngine {
       const isOldest = !oldest.has(e.contactId);
       oldest.add(e.contactId);
 
-      const d = decide(e, c, isOldest, now, this.policy);
+      let d = decide(e, c, isOldest, now, this.policy);
+      if (d.kind === 'send' && d.probe && !this.allowProbe()) {
+        d = { kind: 'wait', until: e.expiresAt };
+      }
       if (d.kind === 'expire') {
         await this.outbox.remove(e.contactId, e.messageId);
         await this.messages.advance(
@@ -388,6 +430,7 @@ export class DeliveryEngine {
   }
 
   private async handlePacket(packet: RadioPacket) {
+    if (isBeacon(packet.payload)) return; // handled by the presence service
     let hint: number;
     try {
       hint = decodeHeader(packet.payload).keyHint;
@@ -433,6 +476,15 @@ export class DeliveryEngine {
         });
       } else {
         this.log(`duplicate ${hex(opened.messageId)} from ${contact.name}`);
+      }
+    } else if (opened.type === MessageType.Hello) {
+      await this.sendAppAck(contact, [opened.messageId], packet.from);
+      if (opened.plaintext.length === BEACON_KEY_LENGTH) {
+        this.emit({
+          kind: 'hello',
+          contactId: contact.id,
+          beaconKey: opened.plaintext,
+        });
       }
     } else if (opened.type === MessageType.Ack) {
       for (const id of decodeAckBody(opened.plaintext)) {

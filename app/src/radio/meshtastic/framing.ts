@@ -57,7 +57,8 @@ export type RadioEvent =
   | { kind: 'config'; config: Config }
   | { kind: 'moduleConfig'; moduleConfig: ModuleConfig }
   | { kind: 'rebooted' }
-  | { kind: 'ignored'; reason: string };
+  /** from: sender node when the event is a packet (any port), for presence. */
+  | { kind: 'ignored'; reason: string; from?: number };
 
 export function encodeWantConfig(configId: number): Uint8Array {
   return toBinary(
@@ -145,7 +146,7 @@ export function decodeFromRadio(bytes: Uint8Array): RadioEvent {
 function decodeMeshPacket(packet: MeshPacket): RadioEvent {
   if (packet.payloadVariant.case !== 'decoded') {
     // Encrypted for a channel we do not hold: nothing the app can do with it.
-    return { kind: 'ignored', reason: 'encrypted packet' };
+    return { kind: 'ignored', reason: 'encrypted packet', from: packet.from };
   }
   const data = packet.payloadVariant.value;
   if (data.portnum === PortNum.ROUTING_APP) {
@@ -175,7 +176,7 @@ function decodeMeshPacket(packet: MeshPacket): RadioEvent {
       hopLimit: packet.hopLimit,
     };
   }
-  return { kind: 'ignored', reason: `port ${data.portnum}` };
+  return { kind: 'ignored', reason: `port ${data.portnum}`, from: packet.from };
 }
 
 export function routingErrorName(error: Routing_Error): string {
